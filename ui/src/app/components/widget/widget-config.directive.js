@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import jsonSchemaDefaults from 'json-schema-defaults';
+
 import thingsboardTypes from '../../common/types.constant';
 import thingsboardUtils from '../../common/utils.service';
 import thingsboardEntityAliasSelect from '../entity-alias-select.directive';
@@ -23,6 +23,8 @@ import thingsboardLegendConfig from '../legend-config.directive';
 import thingsboardJsonForm from '../json-form.directive';
 import thingsboardManageWidgetActions from './action/manage-widget-actions.directive';
 import 'angular-ui-ace';
+
+import './widget-config.scss';
 
 /* eslint-disable import/no-unresolved, import/default */
 
@@ -136,7 +138,7 @@ function WidgetConfig($compile, $templateCache, $rootScope, $translate, $timeout
                             scope.datasources = [];
                         }
                         if (config.datasources) {
-                            for (var i in config.datasources) {
+                            for (var i = 0; i < config.datasources.length; i++) {
                                 scope.datasources.push({value: config.datasources[i]});
                             }
                         }
@@ -308,7 +310,7 @@ function WidgetConfig($compile, $templateCache, $rootScope, $translate, $timeout
                     config.datasources = [];
                 }
                 if (scope.datasources) {
-                    for (var i in scope.datasources) {
+                    for (var i = 0; i < scope.datasources.length; i++) {
                         config.datasources.push(scope.datasources[i].value);
                     }
                 }
@@ -419,7 +421,7 @@ function WidgetConfig($compile, $templateCache, $rootScope, $translate, $timeout
             }
 
             if (angular.isDefined(scope.datakeySettingsSchema.schema)) {
-                result.settings = jsonSchemaDefaults(scope.datakeySettingsSchema.schema);
+                result.settings = utils.generateObjectFromJsonSchema(scope.datakeySettingsSchema.schema);
             }
 
             return result;

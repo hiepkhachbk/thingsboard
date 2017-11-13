@@ -21,7 +21,7 @@ import Subscription from '../../api/subscription';
 
 /*@ngInject*/
 export default function WidgetController($scope, $state, $timeout, $window, $element, $q, $log, $injector, $filter, $compile, tbRaf, types, utils, timeService,
-                                         datasourceService, alarmService, entityService, deviceService, visibleRect, isEdit, isMobile, stDiff, dashboardTimewindow,
+                                         datasourceService, alarmService, entityService, dashboardService, deviceService, visibleRect, isEdit, isMobile, dashboardTimewindow,
                                          dashboardTimewindowApi, widget, aliasController, stateController, widgetInfo, widgetType) {
 
     var vm = this;
@@ -123,7 +123,8 @@ export default function WidgetController($scope, $state, $timeout, $window, $ele
             getActionDescriptors: getActionDescriptors,
             handleWidgetAction: handleWidgetAction
         },
-        stateController: stateController
+        stateController: stateController,
+        aliasController: aliasController
     };
 
     widgetContext.customHeaderActions = [];
@@ -158,7 +159,7 @@ export default function WidgetController($scope, $state, $timeout, $window, $ele
         widgetUtils: widgetContext.utils,
         dashboardTimewindowApi: dashboardTimewindowApi,
         types: types,
-        stDiff: stDiff,
+        getStDiff: dashboardService.getServerTimeDiff,
         aliasController: aliasController
     };
 
@@ -338,7 +339,8 @@ export default function WidgetController($scope, $state, $timeout, $window, $ele
         var deferred = $q.defer();
         if (widget.type !== types.widgetType.rpc.value && widget.type !== types.widgetType.static.value) {
             options = {
-                type: widget.type
+                type: widget.type,
+                stateData: vm.typeParameters.stateData
             }
             if (widget.type == types.widgetType.alarm.value) {
                 options.alarmSource = angular.copy(widget.config.alarmSource);
@@ -544,16 +546,16 @@ export default function WidgetController($scope, $state, $timeout, $window, $ele
             var legendStyle;
             switch($scope.legendConfig.position) {
                 case types.position.top.value:
-                    legendStyle = 'padding-bottom: 8px;';
+                    legendStyle = 'padding-bottom: 8px; max-height: 50%; overflow-y: auto;';
                     break;
                 case types.position.bottom.value:
-                    legendStyle = 'padding-top: 8px;';
+                    legendStyle = 'padding-top: 8px; max-height: 50%; overflow-y: auto;';
                     break;
                 case types.position.left.value:
-                    legendStyle = 'padding-right: 0px;';
+                    legendStyle = 'padding-right: 0px; max-width: 50%; overflow-y: auto;';
                     break;
                 case types.position.right.value:
-                    legendStyle = 'padding-left: 0px;';
+                    legendStyle = 'padding-left: 0px; max-width: 50%; overflow-y: auto;';
                     break;
             }
 
@@ -839,7 +841,7 @@ export default function WidgetController($scope, $state, $timeout, $window, $ele
             subscription.destroy();
         }
         subscriptionInited = false;
-        widgetContext.subscriptions = [];
+        widgetContext.subscriptions = {};
         if (widgetContext.inited) {
             widgetContext.inited = false;
             for (var cafId in cafs) {

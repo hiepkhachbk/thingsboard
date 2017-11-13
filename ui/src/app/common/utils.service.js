@@ -136,6 +136,7 @@ function Utils($mdColorPalette, $rootScope, $window, $translate, $q, $timeout, t
 
     var service = {
         getDefaultDatasource: getDefaultDatasource,
+        generateObjectFromJsonSchema: generateObjectFromJsonSchema,
         getDefaultDatasourceJson: getDefaultDatasourceJson,
         getDefaultAlarmDataKeys: getDefaultAlarmDataKeys,
         getMaterialColor: getMaterialColor,
@@ -277,9 +278,32 @@ function Utils($mdColorPalette, $rootScope, $window, $translate, $q, $timeout, t
     function getDefaultDatasource(dataKeySchema) {
         var datasource = angular.copy(defaultDatasource);
         if (angular.isDefined(dataKeySchema)) {
-            datasource.dataKeys[0].settings = jsonSchemaDefaults(dataKeySchema);
+            datasource.dataKeys[0].settings = generateObjectFromJsonSchema(dataKeySchema);
         }
         return datasource;
+    }
+
+    function generateObjectFromJsonSchema(schema) {
+        var obj = jsonSchemaDefaults(schema);
+        deleteNullProperties(obj);
+        return obj;
+    }
+
+    function deleteNullProperties(obj) {
+        if (angular.isUndefined(obj) || obj == null) {
+            return;
+        }
+        for (var propName in obj) {
+            if (obj[propName] === null || angular.isUndefined(obj[propName])) {
+                delete obj[propName];
+            } else if (angular.isObject(obj[propName])) {
+                deleteNullProperties(obj[propName]);
+            } else if (angular.isArray(obj[propName])) {
+                for (var i=0;i<obj[propName].length;i++) {
+                    deleteNullProperties(obj[propName][i]);
+                }
+            }
+        }
     }
 
     function getDefaultDatasourceJson(dataKeySchema) {
@@ -441,10 +465,20 @@ function Utils($mdColorPalette, $rootScope, $window, $translate, $q, $timeout, t
             settings: {},
             _hash: Math.random()
         }
+        if (keyInfo.units) {
+            dataKey.units = keyInfo.units;
+        }
+        if (angular.isDefined(keyInfo.decimals)) {
+            dataKey.decimals = keyInfo.decimals;
+        }
         if (keyInfo.color) {
             dataKey.color = keyInfo.color;
         } else {
             dataKey.color = genNextColor(datasources);
+        }
+        if (keyInfo.postFuncBody && keyInfo.postFuncBody.length) {
+            dataKey.usePostProcessing = true;
+            dataKey.postFuncBody = keyInfo.postFuncBody;
         }
         return dataKey;
     }

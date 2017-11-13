@@ -17,16 +17,23 @@
 import './entity-state-controller.scss';
 
 /*@ngInject*/
-export default function EntityStateController($scope, $location, $state, $stateParams, $q, $translate, utils, types, dashboardUtils, entityService) {
+export default function EntityStateController($scope, $timeout, $location, $state, $stateParams,
+                                              $q, $translate, utils, types, dashboardUtils, entityService, preservedState) {
 
     var vm = this;
 
     vm.inited = false;
 
+    vm.skipStateChange = false;
+
     vm.openState = openState;
     vm.updateState = updateState;
+    vm.resetState = resetState;
+    vm.getStateObject = getStateObject;
     vm.navigatePrevState = navigatePrevState;
     vm.getStateId = getStateId;
+    vm.getStateIndex = getStateIndex;
+    vm.getStateIdAtIndex = getStateIdAtIndex;
     vm.getStateParams = getStateParams;
     vm.getStateParamsByStateId = getStateParamsByStateId;
     vm.getEntityId = getEntityId;
@@ -45,11 +52,10 @@ export default function EntityStateController($scope, $location, $state, $stateP
                         params: params
                     }
                     //append new state
-                    stopWatchStateObject();
                     vm.stateObject.push(newState);
                     vm.selectedStateIndex = vm.stateObject.length-1;
                     gotoState(vm.stateObject[vm.stateObject.length-1].id, true, openRightLayout);
-                    watchStateObject();
+                    vm.skipStateChange = true;
                 }
             );
         }
@@ -68,28 +74,52 @@ export default function EntityStateController($scope, $location, $state, $stateP
                         params: params
                     }
                     //replace with new state
-                    stopWatchStateObject();
                     vm.stateObject[vm.stateObject.length - 1] = newState;
                     gotoState(vm.stateObject[vm.stateObject.length - 1].id, true, openRightLayout);
-                    watchStateObject();
+                    vm.skipStateChange = true;
                 }
             );
         }
     }
 
+    function resetState() {
+        var rootStateId = dashboardUtils.getRootStateId(vm.states);
+        vm.stateObject = [ { id: rootStateId, params: {} } ];
+        gotoState(rootStateId, true);
+    }
+
+    function getStateObject() {
+        return vm.stateObject;
+    }
+
     function navigatePrevState(index) {
         if (index < vm.stateObject.length-1) {
-            stopWatchStateObject();
             vm.stateObject.splice(index+1, vm.stateObject.length-index-1);
             vm.selectedStateIndex = vm.stateObject.length-1;
             gotoState(vm.stateObject[vm.stateObject.length-1].id, true);
-            watchStateObject();
+            vm.skipStateChange = true;
         }
     }
 
     function getStateId() {
         if (vm.stateObject && vm.stateObject.length) {
             return vm.stateObject[vm.stateObject.length-1].id;
+        } else {
+            return '';
+        }
+    }
+
+    function getStateIndex() {
+        if (vm.stateObject && vm.stateObject.length) {
+            return vm.stateObject.length-1;
+        } else {
+            return -1;
+        }
+    }
+
+    function getStateIdAtIndex(index) {
+        if (vm.stateObject && vm.stateObject[index]) {
+            return vm.stateObject[index].id;
         } else {
             return '';
         }
@@ -192,8 +222,14 @@ export default function EntityStateController($scope, $location, $state, $stateP
         if (!result[0].id) {
             result[0].id = rootStateId;
         }
-        if (result[0].id !== rootStateId) {
-            result = [ { id: rootStateId, params: {} } ];
+        if (!vm.states[result[0].id]) {
+            result[0].id = rootStateId;
+        }
+        var i = result.length;
+        while (i--) {
+            if (!result[i].id || !vm.states[result[i].id]) {
+                result.splice(i, 1);
+            }
         }
         return result;
     }
@@ -208,59 +244,59 @@ export default function EntityStateController($scope, $location, $state, $stateP
     });
 
     function init() {
-        var initialState = $stateParams.state;
-        vm.stateObject = parseState(initialState);
-        vm.selectedStateIndex = vm.stateObject.length-1;
-        gotoState(vm.stateObject[vm.stateObject.length-1].id, false);
-
-        $scope.$watchCollection(function() {
-            return $state.params;
-        }, function(){
-            var currentState = $state.params.state;
-            vm.stateObject = parseState(currentState);
-        });
-
-        $scope.$watch('vm.dashboardCtrl.dashboardCtx.state', function() {
-            if (vm.stateObject[vm.stateObject.length-1].id !== vm.dashboardCtrl.dashboardCtx.state) {
-                stopWatchStateObject();
-                vm.stateObject[vm.stateObject.length-1].id = vm.dashboardCtrl.dashboardCtx.state;
-                updateLocation();
-                watchStateObject();
-            }
-        });
-
-        watchStateObject();
-
-        if (vm.dashboardCtrl.isMobile) {
-            watchSelectedStateIndex();
+        if (preservedState) {
+            vm.stateObject = preservedState;
+            vm.selectedStateIndex = vm.stateObject.length-1;
+            gotoState(vm.stateObject[vm.stateObject.length-1].id, true);
+        } else {
+            var initialState = $stateParams.state;
+            vm.stateObject = parseState(initialState);
+            vm.selectedStateIndex = vm.stateObject.length-1;
+            gotoState(vm.stateObject[vm.stateObject.length-1].id, false);
         }
 
-        $scope.$watch('vm.dashboardCtrl.isMobile', function(newVal, prevVal) {
-            if (!angular.equals(newVal, prevVal)) {
-                if (vm.dashboardCtrl.isMobile) {
-                    watchSelectedStateIndex();
-                } else {
-                    stopWatchSelectedStateIndex();
+        $timeout(() => {
+            $scope.$watchCollection(function () {
+                return $state.params;
+            }, function () {
+                var currentState = $state.params.state;
+                vm.stateObject = parseState(currentState);
+            });
+
+            $scope.$watch('vm.dashboardCtrl.dashboardCtx.state', function () {
+                if (vm.stateObject[vm.stateObject.length - 1].id !== vm.dashboardCtrl.dashboardCtx.state) {
+                    vm.stateObject[vm.stateObject.length - 1].id = vm.dashboardCtrl.dashboardCtx.state;
+                    updateLocation();
+                    vm.skipStateChange = true;
                 }
+            });
+
+            $scope.$watch('vm.stateObject', function(newVal, prevVal) {
+                if (!angular.equals(newVal, prevVal) && newVal) {
+                    if (vm.skipStateChange) {
+                        vm.skipStateChange = false;
+                    } else {
+                        vm.selectedStateIndex = vm.stateObject.length - 1;
+                        gotoState(vm.stateObject[vm.stateObject.length - 1].id, true);
+                    }
+                }
+            }, true);
+
+            if (vm.dashboardCtrl.isMobile) {
+                watchSelectedStateIndex();
             }
+
+            $scope.$watch('vm.dashboardCtrl.isMobile', function (newVal, prevVal) {
+                if (!angular.equals(newVal, prevVal)) {
+                    if (vm.dashboardCtrl.isMobile) {
+                        watchSelectedStateIndex();
+                    } else {
+                        stopWatchSelectedStateIndex();
+                    }
+                }
+            });
         });
 
-    }
-
-    function stopWatchStateObject() {
-        if (vm.stateObjectWatcher) {
-            vm.stateObjectWatcher();
-            vm.stateObjectWatcher = null;
-        }
-    }
-
-    function watchStateObject() {
-        vm.stateObjectWatcher = $scope.$watch('vm.stateObject', function(newVal, prevVal) {
-            if (!angular.equals(newVal, prevVal) && newVal) {
-                vm.selectedStateIndex = vm.stateObject.length-1;
-                gotoState(vm.stateObject[vm.stateObject.length-1].id, true);
-            }
-        }, true);
     }
 
     function stopWatchSelectedStateIndex() {

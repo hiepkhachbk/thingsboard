@@ -44,6 +44,7 @@ import org.thingsboard.server.dao.customer.CustomerService;
 import org.thingsboard.server.dao.device.DeviceService;
 import org.thingsboard.server.dao.event.EventService;
 import org.thingsboard.server.dao.plugin.PluginService;
+import org.thingsboard.server.dao.relation.RelationService;
 import org.thingsboard.server.dao.rule.RuleService;
 import org.thingsboard.server.dao.tenant.TenantService;
 import org.thingsboard.server.dao.timeseries.TimeseriesService;
@@ -110,6 +111,9 @@ public class ActorSystemContext {
     @Getter private AlarmService alarmService;
 
     @Autowired
+    @Getter private RelationService relationService;
+
+    @Autowired
     @Getter @Setter private PluginWebSocketMsgEndpoint wsMsgEndpoint;
 
     @Value("${actors.session.sync.timeout}")
@@ -135,6 +139,9 @@ public class ActorSystemContext {
 
     @Value("${actors.statistics.persist_frequency}")
     @Getter private long statisticsPersistFrequency;
+
+    @Value("${actors.tenant.create_components_on_init}")
+    @Getter private boolean tenantComponentsInitEnabled;
 
     @Getter @Setter private ActorSystem actorSystem;
 

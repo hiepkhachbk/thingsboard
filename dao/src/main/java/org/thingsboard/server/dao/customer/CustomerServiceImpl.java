@@ -28,6 +28,7 @@ import org.thingsboard.server.common.data.id.CustomerId;
 import org.thingsboard.server.common.data.id.TenantId;
 import org.thingsboard.server.common.data.page.TextPageData;
 import org.thingsboard.server.common.data.page.TextPageLink;
+import org.thingsboard.server.dao.asset.AssetService;
 import org.thingsboard.server.dao.dashboard.DashboardService;
 import org.thingsboard.server.dao.device.DeviceService;
 import org.thingsboard.server.dao.entity.AbstractEntityService;
@@ -50,6 +51,7 @@ import static org.thingsboard.server.dao.service.Validator.validateId;
 public class CustomerServiceImpl extends AbstractEntityService implements CustomerService {
 
     private static final String PUBLIC_CUSTOMER_TITLE = "Public";
+    public static final String INCORRECT_CUSTOMER_ID = "Incorrect customerId ";
 
     @Autowired
     private CustomerDao customerDao;
@@ -61,6 +63,9 @@ public class CustomerServiceImpl extends AbstractEntityService implements Custom
     private TenantDao tenantDao;
 
     @Autowired
+    private AssetService assetService;
+
+    @Autowired
     private DeviceService deviceService;
 
     @Autowired
@@ -69,14 +74,14 @@ public class CustomerServiceImpl extends AbstractEntityService implements Custom
     @Override
     public Customer findCustomerById(CustomerId customerId) {
         log.trace("Executing findCustomerById [{}]", customerId);
-        Validator.validateId(customerId, "Incorrect customerId " + customerId);
+        Validator.validateId(customerId, INCORRECT_CUSTOMER_ID + customerId);
         return customerDao.findById(customerId.getId());
     }
 
     @Override
     public ListenableFuture<Customer> findCustomerByIdAsync(CustomerId customerId) {
         log.trace("Executing findCustomerByIdAsync [{}]", customerId);
-        validateId(customerId, "Incorrect customerId " + customerId);
+        validateId(customerId, INCORRECT_CUSTOMER_ID + customerId);
         return customerDao.findByIdAsync(customerId.getId());
     }
 
@@ -90,12 +95,13 @@ public class CustomerServiceImpl extends AbstractEntityService implements Custom
     @Override
     public void deleteCustomer(CustomerId customerId) {
         log.trace("Executing deleteCustomer [{}]", customerId);
-        Validator.validateId(customerId, "Incorrect customerId " + customerId);
+        Validator.validateId(customerId, INCORRECT_CUSTOMER_ID + customerId);
         Customer customer = findCustomerById(customerId);
         if (customer == null) {
             throw new IncorrectParameterException("Unable to delete non-existent customer.");
         }
         dashboardService.unassignCustomerDashboards(customer.getTenantId(), customerId);
+        assetService.unassignCustomerAssets(customer.getTenantId(), customerId);
         deviceService.unassignCustomerDevices(customer.getTenantId(), customerId);
         userService.deleteCustomerUsers(customer.getTenantId(), customerId);
         deleteEntityRelations(customerId);
@@ -105,7 +111,7 @@ public class CustomerServiceImpl extends AbstractEntityService implements Custom
     @Override
     public Customer findOrCreatePublicCustomer(TenantId tenantId) {
         log.trace("Executing findOrCreatePublicCustomer, tenantId [{}]", tenantId);
-        Validator.validateId(tenantId, "Incorrect customerId " + tenantId);
+        Validator.validateId(tenantId, INCORRECT_CUSTOMER_ID + tenantId);
         Optional<Customer> publicCustomerOpt = customerDao.findCustomersByTenantIdAndTitle(tenantId.getId(), PUBLIC_CUSTOMER_TITLE);
         if (publicCustomerOpt.isPresent()) {
             return publicCustomerOpt.get();

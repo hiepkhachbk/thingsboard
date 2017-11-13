@@ -32,6 +32,8 @@ import org.thingsboard.server.actors.shared.rule.SystemRuleManager;
 import org.thingsboard.server.actors.tenant.RuleChainDeviceMsg;
 import org.thingsboard.server.actors.tenant.TenantActor;
 import org.thingsboard.server.common.data.Tenant;
+import org.thingsboard.server.common.data.id.PluginId;
+import org.thingsboard.server.common.data.id.RuleId;
 import org.thingsboard.server.common.data.id.TenantId;
 import org.thingsboard.server.common.data.page.PageDataIterable;
 import org.thingsboard.server.common.msg.cluster.ClusterEventMsg;
@@ -78,11 +80,13 @@ public class AppActor extends ContextAwareActor {
             ruleManager.init(this.context());
             pluginManager.init(this.context());
 
-            PageDataIterable<Tenant> tenantIterator = new PageDataIterable<>(link -> tenantService.findTenants(link), ENTITY_PACK_LIMIT);
-            for (Tenant tenant : tenantIterator) {
-                logger.debug("[{}] Creating tenant actor", tenant.getId());
-                getOrCreateTenantActor(tenant.getId());
-                logger.debug("Tenant actor created.");
+            if (systemContext.isTenantComponentsInitEnabled()) {
+                PageDataIterable<Tenant> tenantIterator = new PageDataIterable<>(tenantService::findTenants, ENTITY_PACK_LIMIT);
+                for (Tenant tenant : tenantIterator) {
+                    logger.debug("[{}] Creating tenant actor", tenant.getId());
+                    getOrCreateTenantActor(tenant.getId());
+                    logger.debug("Tenant actor created.");
+                }
             }
 
             logger.info("Main system actor started.");
@@ -147,14 +151,16 @@ public class AppActor extends ContextAwareActor {
     private void onComponentLifecycleMsg(ComponentLifecycleMsg msg) {
         ActorRef target = null;
         if (SYSTEM_TENANT.equals(msg.getTenantId())) {
-            if (msg.getPluginId().isPresent()) {
-                target = pluginManager.getOrCreatePluginActor(this.context(), msg.getPluginId().get());
-            } else if (msg.getRuleId().isPresent()) {
-                Optional<ActorRef> ref = ruleManager.update(this.context(), msg.getRuleId().get(), msg.getEvent());
+            Optional<PluginId> pluginId = msg.getPluginId();
+            Optional<RuleId> ruleId = msg.getRuleId();
+            if (pluginId.isPresent()) {
+                target = pluginManager.getOrCreatePluginActor(this.context(), pluginId.get());
+            } else if (ruleId.isPresent()) {
+                Optional<ActorRef> ref = ruleManager.update(this.context(), ruleId.get(), msg.getEvent());
                 if (ref.isPresent()) {
                     target = ref.get();
                 } else {
-                    logger.debug("Failed to find actor for rule: [{}]", msg.getRuleId());
+                    logger.debug("Failed to find actor for rule: [{}]", ruleId);
                     return;
                 }
             }
@@ -174,20 +180,15 @@ public class AppActor extends ContextAwareActor {
         TenantId tenantId = toDeviceActorMsg.getTenantId();
         ActorRef tenantActor = getOrCreateTenantActor(tenantId);
         if (toDeviceActorMsg.getPayload().getMsgType().requiresRulesProcessing()) {
-            tenantActor.tell(new RuleChainDeviceMsg(toDeviceActorMsg, ruleManager.getRuleChain()), context().self());
+            tenantActor.tell(new RuleChainDeviceMsg(toDeviceActorMsg, ruleManager.getRuleChain(this.context())), context().self());
         } else {
             tenantActor.tell(toDeviceActorMsg, context().self());
         }
     }
 
     private ActorRef getOrCreateTenantActor(TenantId tenantId) {
-        ActorRef tenantActor = tenantActors.get(tenantId);
-        if (tenantActor == null) {
-            tenantActor = context().actorOf(Props.create(new TenantActor.ActorCreator(systemContext, tenantId))
-                    .withDispatcher(DefaultActorService.CORE_DISPATCHER_NAME), tenantId.toString());
-            tenantActors.put(tenantId, tenantActor);
-        }
-        return tenantActor;
+        return tenantActors.computeIfAbsent(tenantId, k -> context().actorOf(Props.create(new TenantActor.ActorCreator(systemContext, tenantId))
+                .withDispatcher(DefaultActorService.CORE_DISPATCHER_NAME), tenantId.toString()));
     }
 
     private void processTermination(Terminated message) {
