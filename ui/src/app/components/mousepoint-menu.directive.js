@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,12 @@ function MousepointMenu() {
                 var offset = $element.offset();
                 var x = $event.pageX - offset.left;
                 var y = $event.pageY - offset.top;
-
+                if ($attrs.tbOffsetX) {
+                    x += Number($attrs.tbOffsetX);
+                }
+                if ($attrs.tbOffsetY) {
+                    y += Number($attrs.tbOffsetY);
+                }
                 var offsets = {
                     left: x,
                     top: y

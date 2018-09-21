@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@ import FlatButton from 'material-ui/FlatButton';
 import 'brace/ext/language_tools';
 import 'brace/theme/github';
 
+import fixAceEditor from './../ace-editor-fix';
+
 class ThingsboardAceEditor extends React.Component {
 
     constructor(props) {
@@ -31,6 +33,7 @@ class ThingsboardAceEditor extends React.Component {
         this.onBlur = this.onBlur.bind(this);
         this.onFocus = this.onFocus.bind(this);
         this.onTidy = this.onTidy.bind(this);
+        this.onLoad = this.onLoad.bind(this);
         var value = props.value ? props.value + '' : '';
         this.state = {
             value: value,
@@ -70,6 +73,10 @@ class ThingsboardAceEditor extends React.Component {
                 }
             });
         }
+    }
+
+    onLoad(editor) {
+        fixAceEditor(editor);
     }
 
     render() {
@@ -117,10 +124,11 @@ class ThingsboardAceEditor extends React.Component {
                                onChange={this.onValueChanged}
                                onFocus={this.onFocus}
                                onBlur={this.onBlur}
+                               onLoad={this.onLoad}
                                name={this.props.form.title}
                                value={this.state.value}
                                readOnly={this.props.form.readonly}
-                               editorProps={{$blockScrolling: true}}
+                               editorProps={{$blockScrolling: Infinity}}
                                enableBasicAutocompletion={true}
                                enableSnippets={true}
                                enableLiveAutocompletion={true}

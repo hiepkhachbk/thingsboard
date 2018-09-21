@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +20,11 @@ import 'brace/mode/javascript';
 import 'brace/mode/html';
 import 'brace/mode/css';
 import 'brace/mode/json';
-import 'ace-builds/src-min-noconflict/snippets/javascript';
-import 'ace-builds/src-min-noconflict/snippets/text';
-import 'ace-builds/src-min-noconflict/snippets/html';
-import 'ace-builds/src-min-noconflict/snippets/css';
-import 'ace-builds/src-min-noconflict/snippets/json';
+import 'brace/snippets/javascript';
+import 'brace/snippets/text';
+import 'brace/snippets/html';
+import 'brace/snippets/css';
+import 'brace/snippets/json';
 
 /* eslint-disable import/no-unresolved, import/default */
 

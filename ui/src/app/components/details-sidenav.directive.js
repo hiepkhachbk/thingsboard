@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ export default angular.module('thingsboard.directives.detailsSidenav', [])
     .name;
 
 /*@ngInject*/
-function DetailsSidenav($timeout) {
+function DetailsSidenav($timeout, $mdUtil, $q, $animate) {
 
     var linker = function (scope, element, attrs) {
 
@@ -40,6 +40,63 @@ function DetailsSidenav($timeout) {
 
         if (angular.isDefined(attrs.isAlwaysEdit) && attrs.isAlwaysEdit) {
             scope.isEdit = true;
+        }
+
+        var backdrop;
+        var previousContainerStyles;
+
+        if (attrs.hasOwnProperty('tbEnableBackdrop')) {
+            backdrop = $mdUtil.createBackdrop(scope, "md-sidenav-backdrop md-opaque ng-enter");
+            element.on('$destroy', function() {
+                backdrop && backdrop.remove();
+            });
+            scope.$on('$destroy', function(){
+                backdrop && backdrop.remove();
+            });
+            scope.$watch('isOpen', updateIsOpen);
+        }
+
+        function updateIsOpen(isOpen) {
+            backdrop[isOpen ? 'on' : 'off']('click', (ev)=>{
+                ev.preventDefault();
+                scope.isOpen = false;
+                scope.$apply();
+            });
+            var parent = element.parent();
+            var restorePositioning = updateContainerPositions(parent, isOpen);
+
+            return $q.all([
+                isOpen && backdrop ? $animate.enter(backdrop, parent) : backdrop ?
+                    $animate.leave(backdrop) : $q.when(true)
+            ]).then(function() {
+                restorePositioning && restorePositioning();
+            });
+        }
+
+        function updateContainerPositions(parent, willOpen) {
+            var drawerEl = element[0];
+            var scrollTop = parent[0].scrollTop;
+            if (willOpen && scrollTop) {
+                previousContainerStyles = {
+                    top: drawerEl.style.top,
+                    bottom: drawerEl.style.bottom,
+                    height: drawerEl.style.height
+                };
+                var positionStyle = {
+                    top: scrollTop + 'px',
+                    bottom: 'auto',
+                    height: parent[0].clientHeight + 'px'
+                };
+                backdrop.css(positionStyle);
+            }
+            if (!willOpen && previousContainerStyles) {
+                return function() {
+                    backdrop[0].style.top = null;
+                    backdrop[0].style.bottom = null;
+                    backdrop[0].style.height = null;
+                    previousContainerStyles = null;
+                };
+            }
         }
 
         scope.toggleDetailsEditMode = function () {

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,12 +29,17 @@ import thingsboardNoAnimate from '../components/no-animate.directive';
 import thingsboardOnFinishRender from '../components/finish-render.directive';
 import thingsboardSideMenu from '../components/side-menu.directive';
 import thingsboardDashboardAutocomplete from '../components/dashboard-autocomplete.directive';
+import thingsboardKvMap from '../components/kv-map.directive';
+import thingsboardJsonObjectEdit from '../components/json-object-edit.directive';
+import thingsboardJsonContent from '../components/json-content.directive';
 
 import thingsboardUserMenu from './user-menu.directive';
 
 import thingsboardEntity from '../entity';
 import thingsboardEvent from '../event';
 import thingsboardAlarm from '../alarm';
+import thingsboardAuditLog from '../audit';
+import thingsboardExtension from '../extension';
 import thingsboardTenant from '../tenant';
 import thingsboardCustomer from '../customer';
 import thingsboardUser from '../user';
@@ -45,8 +50,7 @@ import thingsboardAsset from '../asset';
 import thingsboardDevice from '../device';
 import thingsboardWidgetLibrary from '../widget';
 import thingsboardDashboard from '../dashboard';
-import thingsboardPlugin from '../plugin';
-import thingsboardRule from '../rule';
+import thingsboardRuleChain from '../rulechain';
 
 import thingsboardJsonForm from '../jsonform';
 
@@ -66,6 +70,8 @@ export default angular.module('thingsboard.home', [
     thingsboardEntity,
     thingsboardEvent,
     thingsboardAlarm,
+    thingsboardAuditLog,
+    thingsboardExtension,
     thingsboardTenant,
     thingsboardCustomer,
     thingsboardUser,
@@ -75,8 +81,7 @@ export default angular.module('thingsboard.home', [
     thingsboardDevice,
     thingsboardWidgetLibrary,
     thingsboardDashboard,
-    thingsboardPlugin,
-    thingsboardRule,
+    thingsboardRuleChain,
     thingsboardJsonForm,
     thingsboardApiDevice,
     thingsboardApiLogin,
@@ -84,7 +89,10 @@ export default angular.module('thingsboard.home', [
     thingsboardNoAnimate,
     thingsboardOnFinishRender,
     thingsboardSideMenu,
-    thingsboardDashboardAutocomplete
+    thingsboardDashboardAutocomplete,
+    thingsboardKvMap,
+    thingsboardJsonObjectEdit,
+    thingsboardJsonContent
 ])
     .config(HomeRoutes)
     .controller('HomeController', HomeController)

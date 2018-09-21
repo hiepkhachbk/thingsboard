@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,13 @@ import UrlHandler from './url.handler';
 export default function AppRun($rootScope, $window, $injector, $location, $log, $state, $mdDialog, $filter, loginService, userService, $translate) {
 
     $window.Flow = Flow;
-    var frame = $window.frameElement;
+    var frame = null;
+    try {
+        frame = $window.frameElement;
+    } catch(e) {
+        // ie11 fix
+    }
+
     var unauthorizedDialog = null;
     var forbiddenDialog = null;
 
@@ -107,7 +113,10 @@ export default function AppRun($rootScope, $window, $injector, $location, $log, 
                             showForbiddenDialog();
                         } else if (to.redirectTo) {
                             evt.preventDefault();
-                            $state.go(to.redirectTo, params)
+                            $state.go(to.redirectTo, params);
+                        } else if (to.name === 'home.dashboards.dashboard' && $rootScope.forceFullscreen) {
+                            evt.preventDefault();
+                            $state.go('dashboard', params);
                         }
                     }
                 } else {
@@ -132,7 +141,7 @@ export default function AppRun($rootScope, $window, $injector, $location, $log, 
         $rootScope.pageTitle = 'ThingsBoard';
 
         $rootScope.stateChangeSuccessHandle = $rootScope.$on('$stateChangeSuccess', function (evt, to, params) {
-            if (userService.isPublic() && to.name === 'home.dashboards.dashboard') {
+            if (userService.isPublic() && to.name === 'dashboard') {
                 $location.search('publicId', userService.getPublicId());
                 userService.updateLastPublicDashboardId(params.dashboardId);
             }

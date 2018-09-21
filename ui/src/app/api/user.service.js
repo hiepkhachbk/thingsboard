@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,6 +54,7 @@ function UserService($http, $q, $rootScope, adminService, dashboardService, logi
         refreshJwtToken: refreshJwtToken,
         refreshTokenPending: refreshTokenPending,
         updateAuthorizationHeader: updateAuthorizationHeader,
+        setAuthorizationRequestHeader: setAuthorizationRequestHeader,
         gotoDefaultPlace: gotoDefaultPlace,
         forceDefaultPlace: forceDefaultPlace,
         updateLastPublicDashboardId: updateLastPublicDashboardId,
@@ -302,7 +303,7 @@ function UserService($http, $q, $rootScope, adminService, dashboardService, logi
                     $rootScope.forceFullscreen = true;
                     fetchAllowedDashboardIds();
                 } else if (currentUser.userId) {
-                    getUser(currentUser.userId).then(
+                    getUser(currentUser.userId, true).then(
                         function success(user) {
                             currentUserDetails = user;
                             updateUserLang();
@@ -319,6 +320,7 @@ function UserService($http, $q, $rootScope, adminService, dashboardService, logi
                         },
                         function fail() {
                             deferred.reject();
+                            logout();
                         }
                     )
                 } else {
@@ -362,6 +364,14 @@ function UserService($http, $q, $rootScope, adminService, dashboardService, logi
         var jwtToken = store.get('jwt_token');
         if (jwtToken) {
             headers['X-Authorization'] = 'Bearer ' + jwtToken;
+        }
+        return jwtToken;
+    }
+
+    function setAuthorizationRequestHeader(request) {
+        var jwtToken = store.get('jwt_token');
+        if (jwtToken) {
+            request.setRequestHeader('X-Authorization', 'Bearer ' + jwtToken);
         }
         return jwtToken;
     }
@@ -414,19 +424,23 @@ function UserService($http, $q, $rootScope, adminService, dashboardService, logi
         }
         $http.post(url, user).then(function success(response) {
             deferred.resolve(response.data);
-        }, function fail(response) {
-            deferred.reject(response.data);
+        }, function fail() {
+            deferred.reject();
         });
         return deferred.promise;
     }
 
-    function getUser(userId) {
+    function getUser(userId, ignoreErrors, config) {
         var deferred = $q.defer();
         var url = '/api/user/' + userId;
-        $http.get(url).then(function success(response) {
+        if (!config) {
+            config = {};
+        }
+        config = Object.assign(config, { ignoreErrors: ignoreErrors });
+        $http.get(url, config).then(function success(response) {
             deferred.resolve(response.data);
-        }, function fail(response) {
-            deferred.reject(response.data);
+        }, function fail() {
+            deferred.reject();
         });
         return deferred.promise;
     }
@@ -436,8 +450,8 @@ function UserService($http, $q, $rootScope, adminService, dashboardService, logi
         var url = '/api/user/' + userId;
         $http.delete(url).then(function success() {
             deferred.resolve();
-        }, function fail(response) {
-            deferred.reject(response.data);
+        }, function fail() {
+            deferred.reject();
         });
         return deferred.promise;
     }
@@ -474,7 +488,8 @@ function UserService($http, $q, $rootScope, adminService, dashboardService, logi
                         } else {
                             return true;
                         }
-                    } else if (to.name === 'home.dashboards.dashboard' && allowedDashboardIds.indexOf(params.dashboardId) > -1) {
+                    } else if ((to.name === 'home.dashboards.dashboard' || to.name === 'dashboard')
+                        && allowedDashboardIds.indexOf(params.dashboardId) > -1) {
                         return false;
                     } else {
                         return true;
@@ -490,10 +505,10 @@ function UserService($http, $q, $rootScope, adminService, dashboardService, logi
             var place = 'home.links';
             if (currentUser.authority === 'TENANT_ADMIN' || currentUser.authority === 'CUSTOMER_USER') {
                 if (userHasDefaultDashboard()) {
-                    place = 'home.dashboards.dashboard';
+                    place = $rootScope.forceFullscreen ? 'dashboard' : 'home.dashboards.dashboard';
                     params = {dashboardId: currentUserDetails.additionalInfo.defaultDashboardId};
                 } else if (isPublic()) {
-                    place = 'home.dashboards.dashboard';
+                    place = 'dashboard';
                     params = {dashboardId: lastPublicDashboardId};
                 }
             } else if (currentUser.authority === 'SYS_ADMIN') {

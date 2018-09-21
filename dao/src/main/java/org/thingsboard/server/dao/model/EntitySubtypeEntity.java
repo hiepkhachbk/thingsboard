@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.thingsboard.server.dao.model;
 
 import com.datastax.driver.mapping.annotations.Column;
@@ -26,7 +25,10 @@ import org.thingsboard.server.dao.model.type.EntityTypeCodec;
 
 import java.util.UUID;
 
-import static org.thingsboard.server.dao.model.ModelConstants.*;
+import static org.thingsboard.server.dao.model.ModelConstants.ENTITY_SUBTYPE_COLUMN_FAMILY_NAME;
+import static org.thingsboard.server.dao.model.ModelConstants.ENTITY_SUBTYPE_ENTITY_TYPE_PROPERTY;
+import static org.thingsboard.server.dao.model.ModelConstants.ENTITY_SUBTYPE_TENANT_ID_PROPERTY;
+import static org.thingsboard.server.dao.model.ModelConstants.ENTITY_SUBTYPE_TYPE_PROPERTY;
 
 @Table(name = ENTITY_SUBTYPE_COLUMN_FAMILY_NAME)
 public class EntitySubtypeEntity {

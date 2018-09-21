@@ -1,6 +1,6 @@
 <!--
 
-    Copyright © 2016-2017 The Thingsboard Authors
+    Copyright © 2016-2018 The Thingsboard Authors
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -19,14 +19,14 @@
     <section layout="row">
         <md-input-container class="md-block" style="width: 200px;">
             <label translate>relation.direction</label>
-            <md-select ng-model="vm.direction" ng-disabled="loading">
+            <md-select ng-model="vm.direction" ng-disabled="$root.loading">
                 <md-option ng-repeat="direction in vm.types.entitySearchDirection" ng-value="direction">
                     {{ ('relation.search-direction.' + direction) | translate}}
                 </md-option>
             </md-select>
         </md-input-container>
     </section>
-    <div layout="column" class="md-whiteframe-z1">
+    <div layout="column" class="md-whiteframe-z1 toolbarsContainer">
         <md-toolbar class="md-table-toolbar md-default" ng-show="!vm.selectedRelations.length
                                                                  && vm.query.search === null">
             <div class="md-toolbar-tools">
@@ -39,7 +39,7 @@
                         {{ 'action.add' | translate }}
                     </md-tooltip>
                 </md-button>
-                <md-button class="md-icon-button" ng-click="vm.enterFilterMode()">
+                <md-button class="md-icon-button" ng-click="vm.enterFilterMode($event)">
                     <md-icon>search</md-icon>
                     <md-tooltip md-direction="top">
                         {{ 'action.search' | translate }}
@@ -64,7 +64,7 @@
                 </md-button>
                 <md-input-container flex>
                     <label>&nbsp;</label>
-                    <input ng-model="vm.query.search" placeholder="{{ 'common.enter-search' | translate }}"/>
+                    <input ng-model="vm.query.search" class="searchInput" placeholder="{{ 'common.enter-search' | translate }}"/>
                 </md-input-container>
                 <md-button class="md-icon-button" aria-label="{{ 'action.back' | translate }}" ng-click="vm.exitFilterMode()">
                     <md-icon aria-label="{{ 'action.close' | translate }}" class="material-icons">close</md-icon>

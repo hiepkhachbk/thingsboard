@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 @import "~compass-sass-mixins/lib/compass";
 @import "constants";
 @import "animations";
+@import "mixins";
 @import "fonts";
 
 /***************
@@ -203,6 +204,37 @@ md-sidenav {
  * THINGSBOARD SPECIFIC
  ***********************/
 
+$swift-ease-out-duration: 0.4s !default;
+$swift-ease-out-timing-function: cubic-bezier(0.25, 0.8, 0.25, 1) !default;
+
+$input-label-float-offset: 6px !default;
+$input-label-float-scale: 0.75 !default;
+
+label {
+  &.tb-title {
+    pointer-events: none;
+    color: #666;
+    font-size: 13px;
+    font-weight: 400;
+    padding-bottom: 15px;
+    &.no-padding {
+      padding-bottom: 0px;
+    }
+    &.tb-required:after {
+      content: ' *';
+      font-size: 13px;
+      vertical-align: top;
+      color: rgba(0,0,0,0.54);
+    }
+    &.tb-error {
+      color: rgb(221,44,0);
+      &.tb-required:after {
+        color: rgb(221,44,0);
+      }
+    }
+  }
+}
+
 .tb-noselect {
   -webkit-touch-callout: none; /* iOS Safari */
   -webkit-user-select: none; /* Safari */
@@ -233,6 +265,22 @@ div {
   &.tb-small {
     color: rgba(0,0,0,0.54);
     font-size: 14px;
+  }
+}
+
+.tb-hint {
+  font-size: 12px;
+  line-height: 14px;
+  transition: all 0.3s cubic-bezier(0.55, 0, 0.55, 0.2);
+  color: grey;
+  padding-bottom: 15px;
+  &.ng-hide, &.ng-enter, &.ng-leave.ng-leave-active {
+    bottom: 26px;
+    opacity: 0;
+  }
+  &.ng-leave, &.ng-enter.ng-enter-active {
+    bottom: 7px;
+    opacity: 1;
   }
 }
 
@@ -273,6 +321,14 @@ pre.tb-highlight {
 .tb-data-table {
   md-toolbar {
     z-index: 0;
+  }
+  md-toolbar.md-table-toolbar.md-default-theme:not(.md-menu-toolbar).md-default .md-button[disabled],
+  md-toolbar.md-table-toolbar:not(.md-menu-toolbar).md-default .md-button[disabled] {
+    color: rgba(0,0,0,0.38);
+  }
+  md-toolbar.md-default-theme:not(.md-menu-toolbar) .md-button[disabled] md-icon,
+  md-toolbar:not(.md-menu-toolbar) .md-button[disabled] md-icon {
+    color: rgba(0,0,0,.28);
   }
   span.no-data-found {
     position: relative;
@@ -382,6 +438,12 @@ pre.tb-highlight {
   }
 }
 
+.tb-card-description {
+  color: rgba(0,0,0,0.54);
+  font-size: 13px;
+  @include line-clamp(2, 1.1);
+}
+
 /***********************
  * Flow
  ***********************/
@@ -486,11 +548,15 @@ md-tabs.tb-headless {
   height: 100%;
   max-width: 240px;
   span {
-    padding: 10px 10px 20px 10px;
+    padding: 0 0 20px 0;
     font-size: 18px;
     font-weight: 400;
     white-space: normal;
     line-height: 18px;
+    max-height: 18px;
+    min-height: 18px;
+    height: 18px;
+    margin: auto;
   }
 }
 

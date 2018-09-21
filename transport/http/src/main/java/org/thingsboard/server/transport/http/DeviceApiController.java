@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,15 +30,17 @@ import org.thingsboard.server.common.data.security.DeviceTokenCredentials;
 import org.thingsboard.server.common.msg.core.*;
 import org.thingsboard.server.common.msg.session.AdaptorToSessionActorMsg;
 import org.thingsboard.server.common.msg.session.BasicAdaptorToSessionActorMsg;
-import org.thingsboard.server.common.msg.session.BasicToDeviceActorSessionMsg;
+import org.thingsboard.server.common.msg.session.BasicTransportToDeviceSessionActorMsg;
 import org.thingsboard.server.common.msg.session.FromDeviceMsg;
 import org.thingsboard.server.common.transport.SessionMsgProcessor;
 import org.thingsboard.server.common.transport.adaptor.JsonConverter;
 import org.thingsboard.server.common.transport.auth.DeviceAuthService;
+import org.thingsboard.server.common.transport.quota.QuotaService;
+import org.thingsboard.server.common.transport.quota.host.HostRequestsQuotaService;
 import org.thingsboard.server.transport.http.session.HttpSessionCtx;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -59,11 +61,18 @@ public class DeviceApiController {
     @Autowired(required = false)
     private DeviceAuthService authService;
 
+    @Autowired(required = false)
+    private HostRequestsQuotaService quotaService;
+
     @RequestMapping(value = "/{deviceToken}/attributes", method = RequestMethod.GET, produces = "application/json")
     public DeferredResult<ResponseEntity> getDeviceAttributes(@PathVariable("deviceToken") String deviceToken,
                                                               @RequestParam(value = "clientKeys", required = false, defaultValue = "") String clientKeys,
-                                                              @RequestParam(value = "sharedKeys", required = false, defaultValue = "") String sharedKeys) {
+                                                              @RequestParam(value = "sharedKeys", required = false, defaultValue = "") String sharedKeys,
+                                                              HttpServletRequest httpRequest) {
         DeferredResult<ResponseEntity> responseWriter = new DeferredResult<ResponseEntity>();
+        if (quotaExceeded(httpRequest, responseWriter)) {
+            return responseWriter;
+        }
         HttpSessionCtx ctx = getHttpSessionCtx(responseWriter);
         if (ctx.login(new DeviceTokenCredentials(deviceToken))) {
             GetAttributesRequest request;
@@ -84,8 +93,11 @@ public class DeviceApiController {
 
     @RequestMapping(value = "/{deviceToken}/attributes", method = RequestMethod.POST)
     public DeferredResult<ResponseEntity> postDeviceAttributes(@PathVariable("deviceToken") String deviceToken,
-                                                               @RequestBody String json) {
+                                                               @RequestBody String json, HttpServletRequest request) {
         DeferredResult<ResponseEntity> responseWriter = new DeferredResult<ResponseEntity>();
+        if (quotaExceeded(request, responseWriter)) {
+            return responseWriter;
+        }
         HttpSessionCtx ctx = getHttpSessionCtx(responseWriter);
         if (ctx.login(new DeviceTokenCredentials(deviceToken))) {
             try {
@@ -101,8 +113,11 @@ public class DeviceApiController {
 
     @RequestMapping(value = "/{deviceToken}/telemetry", method = RequestMethod.POST)
     public DeferredResult<ResponseEntity> postTelemetry(@PathVariable("deviceToken") String deviceToken,
-                                                        @RequestBody String json) {
+                                                        @RequestBody String json, HttpServletRequest request) {
         DeferredResult<ResponseEntity> responseWriter = new DeferredResult<ResponseEntity>();
+        if (quotaExceeded(request, responseWriter)) {
+            return responseWriter;
+        }
         HttpSessionCtx ctx = getHttpSessionCtx(responseWriter);
         if (ctx.login(new DeviceTokenCredentials(deviceToken))) {
             try {
@@ -118,15 +133,20 @@ public class DeviceApiController {
 
     @RequestMapping(value = "/{deviceToken}/rpc", method = RequestMethod.GET, produces = "application/json")
     public DeferredResult<ResponseEntity> subscribeToCommands(@PathVariable("deviceToken") String deviceToken,
-                                                              @RequestParam(value = "timeout", required = false, defaultValue = "0") long timeout) {
-        return subscribe(deviceToken, timeout, new RpcSubscribeMsg());
+                                                              @RequestParam(value = "timeout", required = false, defaultValue = "0") long timeout,
+                                                              HttpServletRequest request) {
+
+        return subscribe(deviceToken, timeout, new RpcSubscribeMsg(), request);
     }
 
     @RequestMapping(value = "/{deviceToken}/rpc/{requestId}", method = RequestMethod.POST)
     public DeferredResult<ResponseEntity> replyToCommand(@PathVariable("deviceToken") String deviceToken,
                                                          @PathVariable("requestId") Integer requestId,
-                                                         @RequestBody String json) {
+                                                         @RequestBody String json, HttpServletRequest request) {
         DeferredResult<ResponseEntity> responseWriter = new DeferredResult<ResponseEntity>();
+        if (quotaExceeded(request, responseWriter)) {
+            return responseWriter;
+        }
         HttpSessionCtx ctx = getHttpSessionCtx(responseWriter);
         if (ctx.login(new DeviceTokenCredentials(deviceToken))) {
             try {
@@ -143,8 +163,11 @@ public class DeviceApiController {
 
     @RequestMapping(value = "/{deviceToken}/rpc", method = RequestMethod.POST)
     public DeferredResult<ResponseEntity> postRpcRequest(@PathVariable("deviceToken") String deviceToken,
-                                                         @RequestBody String json) {
+                                                         @RequestBody String json, HttpServletRequest httpRequest) {
         DeferredResult<ResponseEntity> responseWriter = new DeferredResult<ResponseEntity>();
+        if (quotaExceeded(httpRequest, responseWriter)) {
+            return responseWriter;
+        }
         HttpSessionCtx ctx = getHttpSessionCtx(responseWriter);
         if (ctx.login(new DeviceTokenCredentials(deviceToken))) {
             try {
@@ -163,12 +186,17 @@ public class DeviceApiController {
 
     @RequestMapping(value = "/{deviceToken}/attributes/updates", method = RequestMethod.GET, produces = "application/json")
     public DeferredResult<ResponseEntity> subscribeToAttributes(@PathVariable("deviceToken") String deviceToken,
-                                                                @RequestParam(value = "timeout", required = false, defaultValue = "0") long timeout) {
-        return subscribe(deviceToken, timeout, new AttributesSubscribeMsg());
+                                                                @RequestParam(value = "timeout", required = false, defaultValue = "0") long timeout,
+                                                                HttpServletRequest httpRequest) {
+
+        return subscribe(deviceToken, timeout, new AttributesSubscribeMsg(), httpRequest);
     }
 
-    private DeferredResult<ResponseEntity> subscribe(String deviceToken, long timeout, FromDeviceMsg msg) {
+    private DeferredResult<ResponseEntity> subscribe(String deviceToken, long timeout, FromDeviceMsg msg, HttpServletRequest httpRequest) {
         DeferredResult<ResponseEntity> responseWriter = new DeferredResult<ResponseEntity>();
+        if (quotaExceeded(httpRequest, responseWriter)) {
+            return responseWriter;
+        }
         HttpSessionCtx ctx = getHttpSessionCtx(responseWriter, timeout);
         if (ctx.login(new DeviceTokenCredentials(deviceToken))) {
             try {
@@ -192,7 +220,16 @@ public class DeviceApiController {
 
     private void process(HttpSessionCtx ctx, FromDeviceMsg request) {
         AdaptorToSessionActorMsg msg = new BasicAdaptorToSessionActorMsg(ctx, request);
-        processor.process(new BasicToDeviceActorSessionMsg(ctx.getDevice(), msg));
+        processor.process(new BasicTransportToDeviceSessionActorMsg(ctx.getDevice(), msg));
+    }
+
+    private boolean quotaExceeded(HttpServletRequest request, DeferredResult<ResponseEntity> responseWriter) {
+        if (quotaService.isQuotaExceeded(request.getRemoteAddr())) {
+            log.warn("REST Quota exceeded for [{}] . Disconnect", request.getRemoteAddr());
+            responseWriter.setResult(new ResponseEntity<>(HttpStatus.BANDWIDTH_LIMIT_EXCEEDED));
+            return true;
+        }
+        return false;
     }
 
 }

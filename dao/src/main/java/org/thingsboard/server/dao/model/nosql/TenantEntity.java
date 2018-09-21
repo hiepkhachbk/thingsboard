@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,20 @@ import org.thingsboard.server.dao.model.type.JsonCodec;
 
 import java.util.UUID;
 
-import static org.thingsboard.server.dao.model.ModelConstants.*;
+import static org.thingsboard.server.dao.model.ModelConstants.ADDRESS2_PROPERTY;
+import static org.thingsboard.server.dao.model.ModelConstants.ADDRESS_PROPERTY;
+import static org.thingsboard.server.dao.model.ModelConstants.CITY_PROPERTY;
+import static org.thingsboard.server.dao.model.ModelConstants.COUNTRY_PROPERTY;
+import static org.thingsboard.server.dao.model.ModelConstants.EMAIL_PROPERTY;
+import static org.thingsboard.server.dao.model.ModelConstants.ID_PROPERTY;
+import static org.thingsboard.server.dao.model.ModelConstants.PHONE_PROPERTY;
+import static org.thingsboard.server.dao.model.ModelConstants.SEARCH_TEXT_PROPERTY;
+import static org.thingsboard.server.dao.model.ModelConstants.STATE_PROPERTY;
+import static org.thingsboard.server.dao.model.ModelConstants.TENANT_ADDITIONAL_INFO_PROPERTY;
+import static org.thingsboard.server.dao.model.ModelConstants.TENANT_COLUMN_FAMILY_NAME;
+import static org.thingsboard.server.dao.model.ModelConstants.TENANT_REGION_PROPERTY;
+import static org.thingsboard.server.dao.model.ModelConstants.TENANT_TITLE_PROPERTY;
+import static org.thingsboard.server.dao.model.ModelConstants.ZIP_PROPERTY;
 
 @Table(name = TENANT_COLUMN_FAMILY_NAME)
 @EqualsAndHashCode

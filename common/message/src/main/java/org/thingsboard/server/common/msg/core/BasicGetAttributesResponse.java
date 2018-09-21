@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,23 +17,24 @@ package org.thingsboard.server.common.msg.core;
 
 import lombok.ToString;
 import org.thingsboard.server.common.msg.kv.AttributesKVMsg;
-import org.thingsboard.server.common.msg.session.MsgType;
+import org.thingsboard.server.common.msg.session.SessionMsgType;
+import org.thingsboard.server.common.msg.session.SessionMsgType;
 
 @ToString
 public class BasicGetAttributesResponse extends BasicResponseMsg<AttributesKVMsg> implements GetAttributesResponse {
 
     private static final long serialVersionUID = 1L;
 
-    public static BasicGetAttributesResponse onSuccess(MsgType requestMsgType, int requestId, AttributesKVMsg code) {
+    public static BasicGetAttributesResponse onSuccess(SessionMsgType requestMsgType, int requestId, AttributesKVMsg code) {
         return new BasicGetAttributesResponse(requestMsgType, requestId, true, null, code);
     }
 
-    public static BasicGetAttributesResponse onError(MsgType requestMsgType, int requestId, Exception error) {
+    public static BasicGetAttributesResponse onError(SessionMsgType requestMsgType, int requestId, Exception error) {
         return new BasicGetAttributesResponse(requestMsgType, requestId, false, error, null);
     }
 
-    private BasicGetAttributesResponse(MsgType requestMsgType, int requestId, boolean success, Exception error, AttributesKVMsg code) {
-        super(requestMsgType, requestId, MsgType.GET_ATTRIBUTES_RESPONSE, success, error, code);
+    private BasicGetAttributesResponse(SessionMsgType requestMsgType, int requestId, boolean success, Exception error, AttributesKVMsg code) {
+        super(requestMsgType, requestId, SessionMsgType.GET_ATTRIBUTES_RESPONSE, success, error, code);
     }
 
 }

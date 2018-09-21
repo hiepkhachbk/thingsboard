@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@ import org.thingsboard.server.dao.model.sql.DashboardInfoEntity;
 import org.thingsboard.server.dao.util.SqlDao;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Created by Valerii Sosliuk on 5/6/2017.
@@ -39,12 +38,4 @@ public interface DashboardInfoRepository extends CrudRepository<DashboardInfoEnt
                                              @Param("idOffset") String idOffset,
                                              Pageable pageable);
 
-    @Query("SELECT di FROM DashboardInfoEntity di WHERE di.tenantId = :tenantId " +
-            "AND di.customerId = :customerId AND LOWER(di.searchText) LIKE LOWER(CONCAT(:searchText, '%')) " +
-            "AND di.id > :idOffset ORDER BY di.id")
-    List<DashboardInfoEntity> findByTenantIdAndCustomerId(@Param("tenantId") String tenantId,
-                                                          @Param("customerId") String customerId,
-                                                          @Param("searchText") String searchText,
-                                                          @Param("idOffset") String idOffset,
-                                                          Pageable pageable);
 }

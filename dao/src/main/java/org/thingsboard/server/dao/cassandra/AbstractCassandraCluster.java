@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,17 @@
 package org.thingsboard.server.dao.cassandra;
 
 
-import com.datastax.driver.core.*;
+import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.ConsistencyLevel;
+import com.datastax.driver.core.HostDistance;
+import com.datastax.driver.core.PoolingOptions;
 import com.datastax.driver.core.ProtocolOptions.Compression;
+import com.datastax.driver.core.Session;
+import com.datastax.driver.mapping.DefaultPropertyMapper;
 import com.datastax.driver.mapping.Mapper;
+import com.datastax.driver.mapping.MappingConfiguration;
 import com.datastax.driver.mapping.MappingManager;
-import lombok.AccessLevel;
-import lombok.Data;
-import lombok.Getter;
+import com.datastax.driver.mapping.PropertyAccessStrategy;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +40,6 @@ import java.util.Collections;
 import java.util.List;
 
 @Slf4j
-@Data
 public abstract class AbstractCassandraCluster {
 
     private static final String COMMA = ",";
@@ -64,6 +67,10 @@ public abstract class AbstractCassandraCluster {
     private long initTimeout;
     @Value("${cassandra.init_retry_interval_ms}")
     private long initRetryInterval;
+    @Value("${cassandra.max_requests_per_connection_local:32768}")
+    private int max_requests_local;
+    @Value("${cassandra.max_requests_per_connection_remote:32768}")
+    private int max_requests_remote;
 
     @Autowired
     private CassandraSocketOptions socketOpts;
@@ -75,8 +82,9 @@ public abstract class AbstractCassandraCluster {
     private Environment environment;
 
     private Cluster cluster;
+    private Cluster.Builder clusterBuilder;
 
-    @Getter(AccessLevel.NONE) private Session session;
+    private Session session;
 
     private MappingManager mappingManager;
 
@@ -88,32 +96,34 @@ public abstract class AbstractCassandraCluster {
 
     protected void init(String keyspaceName) {
         this.keyspaceName = keyspaceName;
-        Cluster.Builder builder = Cluster.builder()
+        this.clusterBuilder = Cluster.builder()
                 .addContactPointsWithPorts(getContactPoints(url))
                 .withClusterName(clusterName)
                 .withSocketOptions(socketOpts.getOpts())
                 .withPoolingOptions(new PoolingOptions()
-                        .setMaxRequestsPerConnection(HostDistance.LOCAL, 32768)
-                        .setMaxRequestsPerConnection(HostDistance.REMOTE, 32768));
-        builder.withQueryOptions(queryOpts.getOpts());
-        builder.withCompression(StringUtils.isEmpty(compression) ? Compression.NONE : Compression.valueOf(compression.toUpperCase()));
+                        .setMaxRequestsPerConnection(HostDistance.LOCAL, max_requests_local)
+                        .setMaxRequestsPerConnection(HostDistance.REMOTE, max_requests_remote));
+        this.clusterBuilder.withQueryOptions(queryOpts.getOpts());
+        this.clusterBuilder.withCompression(StringUtils.isEmpty(compression) ? Compression.NONE : Compression.valueOf(compression.toUpperCase()));
         if (ssl) {
-            builder.withSSL();
+            this.clusterBuilder.withSSL();
         }
         if (!jmx) {
-            builder.withoutJMXReporting();
+            this.clusterBuilder.withoutJMXReporting();
         }
         if (!metrics) {
-            builder.withoutMetrics();
+            this.clusterBuilder.withoutMetrics();
         }
         if (credentials) {
-            builder.withCredentials(username, password);
+            this.clusterBuilder.withCredentials(username, password);
         }
-        cluster = builder.build();
-        cluster.init();
         if (!isInstall()) {
             initSession();
         }
+    }
+
+    public Cluster getCluster() {
+        return cluster;
     }
 
     public Session getSession() {
@@ -139,13 +149,20 @@ public abstract class AbstractCassandraCluster {
         long endTime = System.currentTimeMillis() + initTimeout;
         while (System.currentTimeMillis() < endTime) {
             try {
-
+                cluster = clusterBuilder.build();
+                cluster.init();
                 if (this.keyspaceName != null) {
                     session = cluster.connect(keyspaceName);
                 } else {
                     session = cluster.connect();
                 }
-                mappingManager = new MappingManager(session);
+//                For Cassandra Driver version 3.5.0
+                DefaultPropertyMapper propertyMapper = new DefaultPropertyMapper();
+                propertyMapper.setPropertyAccessStrategy(PropertyAccessStrategy.FIELDS);
+                MappingConfiguration configuration = MappingConfiguration.builder().withPropertyMapper(propertyMapper).build();
+                mappingManager = new MappingManager(session, configuration);
+//                For Cassandra Driver version 3.0.0
+//                mappingManager = new MappingManager(session);
                 break;
             } catch (Exception e) {
                 log.warn("Failed to initialize cassandra cluster due to {}. Will retry in {} ms", e.getMessage(), initRetryInterval);

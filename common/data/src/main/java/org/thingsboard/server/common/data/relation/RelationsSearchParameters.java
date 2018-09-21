@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,13 +33,19 @@ public class RelationsSearchParameters {
     private UUID rootId;
     private EntityType rootType;
     private EntitySearchDirection direction;
+    private RelationTypeGroup relationTypeGroup;
     private int maxLevel = 1;
 
     public RelationsSearchParameters(EntityId entityId, EntitySearchDirection direction, int maxLevel) {
+        this(entityId, direction, maxLevel, RelationTypeGroup.COMMON);
+    }
+
+    public RelationsSearchParameters(EntityId entityId, EntitySearchDirection direction, int maxLevel, RelationTypeGroup relationTypeGroup) {
         this.rootId = entityId.getId();
         this.rootType = entityId.getEntityType();
         this.direction = direction;
         this.maxLevel = maxLevel;
+        this.relationTypeGroup = relationTypeGroup;
     }
 
     public EntityId getEntityId() {

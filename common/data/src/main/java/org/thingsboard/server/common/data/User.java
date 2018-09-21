@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,11 @@
  */
 package org.thingsboard.server.common.data;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.EqualsAndHashCode;
 import org.thingsboard.server.common.data.id.CustomerId;
+import org.thingsboard.server.common.data.id.EntityId;
 import org.thingsboard.server.common.data.id.TenantId;
 import org.thingsboard.server.common.data.id.UserId;
 import org.thingsboard.server.common.data.security.Authority;
@@ -25,7 +27,7 @@ import org.thingsboard.server.common.data.security.Authority;
 import com.fasterxml.jackson.databind.JsonNode;
 
 @EqualsAndHashCode(callSuper = true)
-public class User extends SearchTextBased<UserId> implements HasName {
+public class User extends SearchTextBasedWithAdditionalInfo<UserId> implements HasName, HasTenantId, HasCustomerId {
 
     private static final long serialVersionUID = 8250339805336035966L;
 
@@ -35,7 +37,6 @@ public class User extends SearchTextBased<UserId> implements HasName {
     private Authority authority;
     private String firstName;
     private String lastName;
-    private transient JsonNode additionalInfo;
 
     public User() {
         super();
@@ -53,7 +54,6 @@ public class User extends SearchTextBased<UserId> implements HasName {
         this.authority = user.getAuthority();
         this.firstName = user.getFirstName();
         this.lastName = user.getLastName();
-        this.additionalInfo = user.getAdditionalInfo();
     }
 
     public TenantId getTenantId() {
@@ -110,14 +110,6 @@ public class User extends SearchTextBased<UserId> implements HasName {
         this.lastName = lastName;
     }
 
-    public JsonNode getAdditionalInfo() {
-        return additionalInfo;
-    }
-
-    public void setAdditionalInfo(JsonNode additionalInfo) {
-        this.additionalInfo = additionalInfo;
-    }
-    
     @Override
     public String getSearchText() {
         return getEmail();
@@ -139,7 +131,7 @@ public class User extends SearchTextBased<UserId> implements HasName {
         builder.append(", lastName=");
         builder.append(lastName);
         builder.append(", additionalInfo=");
-        builder.append(additionalInfo);
+        builder.append(getAdditionalInfo());
         builder.append(", createdTime=");
         builder.append(createdTime);
         builder.append(", id=");
@@ -148,4 +140,18 @@ public class User extends SearchTextBased<UserId> implements HasName {
         return builder.toString();
     }
 
+    @JsonIgnore
+    public boolean isSystemAdmin() {
+        return tenantId == null || EntityId.NULL_UUID.equals(tenantId.getId());
+    }
+
+    @JsonIgnore
+    public boolean isTenantAdmin() {
+        return !isSystemAdmin() && (customerId == null || EntityId.NULL_UUID.equals(customerId.getId()));
+    }
+
+    @JsonIgnore
+    public boolean isCustomerUser() {
+        return !isSystemAdmin() && !isTenantAdmin();
+    }
 }

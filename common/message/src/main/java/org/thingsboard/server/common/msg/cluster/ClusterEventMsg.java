@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,20 @@
 package org.thingsboard.server.common.msg.cluster;
 
 import lombok.Data;
+import org.thingsboard.server.common.msg.MsgType;
+import org.thingsboard.server.common.msg.TbActorMsg;
 
 /**
  * @author Andrew Shvayka
  */
 @Data
-public final class ClusterEventMsg {
+public final class ClusterEventMsg implements TbActorMsg {
 
     private final ServerAddress serverAddress;
     private final boolean added;
 
+    @Override
+    public MsgType getMsgType() {
+        return MsgType.CLUSTER_EVENT_MSG;
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -156,6 +156,78 @@ export default angular.module('thingsboard.types', [])
                     color: "green"
                 }
             },
+            auditLogActionType: {
+                "ADDED": {
+                    name: "audit-log.type-added"
+                },
+                "DELETED": {
+                    name: "audit-log.type-deleted"
+                },
+                "UPDATED": {
+                    name: "audit-log.type-updated"
+                },
+                "ATTRIBUTES_UPDATED": {
+                    name: "audit-log.type-attributes-updated"
+                },
+                "ATTRIBUTES_DELETED": {
+                    name: "audit-log.type-attributes-deleted"
+                },
+                "RPC_CALL": {
+                    name: "audit-log.type-rpc-call"
+                },
+                "CREDENTIALS_UPDATED": {
+                    name: "audit-log.type-credentials-updated"
+                },
+                "ASSIGNED_TO_CUSTOMER": {
+                    name: "audit-log.type-assigned-to-customer"
+                },
+                "UNASSIGNED_FROM_CUSTOMER": {
+                    name: "audit-log.type-unassigned-from-customer"
+                },
+                "ACTIVATED": {
+                    name: "audit-log.type-activated"
+                },
+                "SUSPENDED": {
+                    name: "audit-log.type-suspended"
+                },
+                "CREDENTIALS_READ": {
+                    name: "audit-log.type-credentials-read"
+                },
+                "ATTRIBUTES_READ": {
+                    name: "audit-log.type-attributes-read"
+                },
+                "RELATION_ADD_OR_UPDATE": {
+                    name: "audit-log.type-relation-add-or-update"
+                },
+                "RELATION_DELETED": {
+                    name: "audit-log.type-relation-delete"
+                },
+                "RELATIONS_DELETED": {
+                    name: "audit-log.type-relations-delete"
+                },
+                "ALARM_ACK": {
+                    name: "audit-log.type-alarm-ack"
+                },
+                "ALARM_CLEAR": {
+                    name: "audit-log.type-alarm-clear"
+                }
+            },
+            auditLogActionStatus: {
+                "SUCCESS": {
+                    value: "SUCCESS",
+                    name: "audit-log.status-success"
+                },
+                "FAILURE": {
+                    value: "FAILURE",
+                    name: "audit-log.status-failure"
+                }
+            },
+            auditLogMode: {
+                tenant: "tenant",
+                entity: "entity",
+                user: "user",
+                customer: "customer"
+            },
             aliasFilterType: {
                 singleEntity: {
                     value: 'singleEntity',
@@ -222,22 +294,43 @@ export default angular.module('thingsboard.types', [])
                 function: "function",
                 alarm: "alarm"
             },
+            contentType: {
+                "JSON": {
+                    value: "JSON",
+                    name: "content-type.json",
+                    code: "json"
+                },
+                "TEXT": {
+                    value: "TEXT",
+                    name: "content-type.text",
+                    code: "text"
+                },
+                "BINARY": {
+                    value: "BINARY",
+                    name: "content-type.binary",
+                    code: "text"
+                }
+            },
             componentType: {
+                enrichment: "ENRICHMENT",
                 filter: "FILTER",
-                processor: "PROCESSOR",
+                transformation: "TRANSFORMATION",
                 action: "ACTION",
-                plugin: "PLUGIN"
+                external: "EXTERNAL"
             },
             entityType: {
                 device: "DEVICE",
                 asset: "ASSET",
-                rule: "RULE",
-                plugin: "PLUGIN",
                 tenant: "TENANT",
                 customer: "CUSTOMER",
                 user: "USER",
                 dashboard: "DASHBOARD",
-                alarm: "ALARM"
+                alarm: "ALARM",
+                rulechain: "RULE_CHAIN",
+                rulenode: "RULE_NODE"
+            },
+            aliasEntityType: {
+                current_customer: "CURRENT_CUSTOMER"
             },
             entityTypeTranslations: {
                 "DEVICE": {
@@ -251,18 +344,6 @@ export default angular.module('thingsboard.types', [])
                     typePlural: 'entity.type-assets',
                     list: 'entity.list-of-assets',
                     nameStartsWith: 'entity.asset-name-starts-with'
-                },
-                "RULE": {
-                    type: 'entity.type-rule',
-                    typePlural: 'entity.type-rules',
-                    list: 'entity.list-of-rules',
-                    nameStartsWith: 'entity.rule-name-starts-with'
-                },
-                "PLUGIN": {
-                    type: 'entity.type-plugin',
-                    typePlural: 'entity.type-plugins',
-                    list: 'entity.list-of-plugins',
-                    nameStartsWith: 'entity.plugin-name-starts-with'
                 },
                 "TENANT": {
                     type: 'entity.type-tenant',
@@ -293,6 +374,22 @@ export default angular.module('thingsboard.types', [])
                     typePlural: 'entity.type-alarms',
                     list: 'entity.list-of-alarms',
                     nameStartsWith: 'entity.alarm-name-starts-with'
+                },
+                "RULE_CHAIN": {
+                    type: 'entity.type-rulechain',
+                    typePlural: 'entity.type-rulechains',
+                    list: 'entity.list-of-rulechains',
+                    nameStartsWith: 'entity.rulechain-name-starts-with'
+                },
+                "RULE_NODE": {
+                    type: 'entity.type-rulenode',
+                    typePlural: 'entity.type-rulenodes',
+                    list: 'entity.list-of-rulenodes',
+                    nameStartsWith: 'entity.rulenode-name-starts-with'
+                },
+                "CURRENT_CUSTOMER": {
+                    type: 'entity.type-current-customer',
+                    list: 'entity.type-current-customer'
                 }
             },
             entitySearchDirection: {
@@ -317,6 +414,84 @@ export default angular.module('thingsboard.types', [])
                     name: "event.type-stats"
                 }
             },
+            debugEventType: {
+                debugRuleNode: {
+                    value: "DEBUG_RULE_NODE",
+                    name: "event.type-debug-rule-node"
+                },
+                debugRuleChain: {
+                    value: "DEBUG_RULE_CHAIN",
+                    name: "event.type-debug-rule-chain"
+                }
+            },
+            extensionType: {
+                http: "HTTP",
+                mqtt: "MQTT",
+                opc: "OPC UA",
+                modbus: "MODBUS"
+            },
+            extensionValueType: {
+                string: 'value.string',
+                long: 'value.long',
+                double: 'value.double',
+                boolean: 'value.boolean'
+            },
+            extensionTransformerType: {
+                toDouble: 'extension.to-double',
+                custom: 'extension.custom'
+            },
+            mqttConverterTypes: {
+                json: 'extension.converter-json',
+                custom: 'extension.custom'
+            },
+            mqttCredentialTypes: {
+                anonymous:  {
+                    value: "anonymous",
+                    name: "extension.anonymous"
+                },
+                basic: {
+                    value: "basic",
+                    name: "extension.basic"
+                },
+                pem: {
+                    value: "cert.PEM",
+                    name: "extension.pem"
+                }
+            },
+            extensionOpcSecurityTypes: {
+                Basic128Rsa15: "Basic128Rsa15",
+                Basic256: "Basic256",
+                Basic256Sha256: "Basic256Sha256",
+                None: "None"
+            },
+            extensionIdentityType: {
+                anonymous: "extension.anonymous",
+                username: "extension.username"
+            },
+            extensionKeystoreType: {
+                PKCS12: "PKCS12",
+                JKS: "JKS"
+            },
+            extensionModbusFunctionCodes: {
+                1: "Read Coils (1)",
+                2: "Read Discrete Inputs (2)",
+                3: "Read Multiple Holding Registers (3)",
+                4: "Read Input Registers (4)"
+            },
+            extensionModbusTransports: {
+                tcp: "TCP",
+                udp: "UDP",
+                rtu: "RTU"
+            },
+            extensionModbusRtuParities: {
+                none: "none",
+                even: "even",
+                odd: "odd"
+            },
+            extensionModbusRtuEncodings: {
+                ascii: "ascii",
+                rtu: "rtu"
+            },
             latestTelemetry: {
                 value: "LATEST_TELEMETRY",
                 name: "attribute.scope-latest-telemetry",
@@ -337,6 +512,165 @@ export default angular.module('thingsboard.types', [])
                     value: "SHARED_SCOPE",
                     name: "attribute.scope-shared",
                     clientSide: false
+                }
+            },
+            ruleNodeTypeComponentTypes: ["FILTER", "ENRICHMENT", "TRANSFORMATION", "ACTION", "EXTERNAL"],
+            ruleChainNodeComponent: {
+                type: 'RULE_CHAIN',
+                name: 'rule chain',
+                clazz: 'tb.internal.RuleChain',
+                configurationDescriptor: {
+                    nodeDefinition: {
+                        description: "",
+                        details: "Forwards incoming messages to specified Rule Chain",
+                        inEnabled: true,
+                        outEnabled: false,
+                        relationTypes: [],
+                        customRelations: false,
+                        defaultConfiguration: {}
+                    }
+                }
+            },
+            unknownNodeComponent: {
+                type: 'UNKNOWN',
+                name: 'unknown',
+                clazz: 'tb.internal.Unknown',
+                configurationDescriptor: {
+                    nodeDefinition: {
+                        description: "",
+                        details: "",
+                        inEnabled: true,
+                        outEnabled: true,
+                        relationTypes: [],
+                        customRelations: false,
+                        defaultConfiguration: {}
+                    }
+                }
+            },
+            inputNodeComponent: {
+                type: 'INPUT',
+                name: 'Input',
+                clazz: 'tb.internal.Input'
+            },
+            ruleNodeType: {
+                FILTER: {
+                    value: "FILTER",
+                    name: "rulenode.type-filter",
+                    details: "rulenode.type-filter-details",
+                    nodeClass: "tb-filter-type",
+                    icon: "filter_list"
+                },
+                ENRICHMENT: {
+                    value: "ENRICHMENT",
+                    name: "rulenode.type-enrichment",
+                    details: "rulenode.type-enrichment-details",
+                    nodeClass: "tb-enrichment-type",
+                    icon: "playlist_add"
+                },
+                TRANSFORMATION: {
+                    value: "TRANSFORMATION",
+                    name: "rulenode.type-transformation",
+                    details: "rulenode.type-transformation-details",
+                    nodeClass: "tb-transformation-type",
+                    icon: "transform"
+                },
+                ACTION: {
+                    value: "ACTION",
+                    name: "rulenode.type-action",
+                    details: "rulenode.type-action-details",
+                    nodeClass: "tb-action-type",
+                    icon: "flash_on"
+                },
+                EXTERNAL: {
+                    value: "EXTERNAL",
+                    name: "rulenode.type-external",
+                    details: "rulenode.type-external-details",
+                    nodeClass: "tb-external-type",
+                    icon: "cloud_upload"
+                },
+                RULE_CHAIN: {
+                    value: "RULE_CHAIN",
+                    name: "rulenode.type-rule-chain",
+                    details: "rulenode.type-rule-chain-details",
+                    nodeClass: "tb-rule-chain-type",
+                    icon: "settings_ethernet"
+                },
+                INPUT: {
+                    value: "INPUT",
+                    name: "rulenode.type-input",
+                    details: "rulenode.type-input-details",
+                    nodeClass: "tb-input-type",
+                    icon: "input",
+                    special: true
+                },
+                UNKNOWN: {
+                    value: "UNKNOWN",
+                    name: "rulenode.type-unknown",
+                    details: "rulenode.type-unknown-details",
+                    nodeClass: "tb-unknown-type",
+                    icon: "help_outline"
+                }
+            },
+            messageType: {
+                'POST_ATTRIBUTES_REQUEST': {
+                    name: 'Post attributes',
+                    value: 'POST_ATTRIBUTES_REQUEST'
+                },
+                'POST_TELEMETRY_REQUEST': {
+                    name: 'Post telemetry',
+                    value: 'POST_TELEMETRY_REQUEST'
+                },
+                'TO_SERVER_RPC_REQUEST': {
+                    name: 'RPC Request from Device',
+                    value: 'TO_SERVER_RPC_REQUEST'
+                },
+                'RPC_CALL_FROM_SERVER_TO_DEVICE': {
+                    name: 'RPC Request to Device',
+                    value: 'RPC_CALL_FROM_SERVER_TO_DEVICE'
+                },
+                'ACTIVITY_EVENT': {
+                    name: 'Activity Event',
+                    value: 'ACTIVITY_EVENT'
+                },
+                'INACTIVITY_EVENT': {
+                    name: 'Inactivity Event',
+                    value: 'INACTIVITY_EVENT'
+                },
+                'CONNECT_EVENT': {
+                    name: 'Connect Event',
+                    value: 'CONNECT_EVENT'
+                },
+                'DISCONNECT_EVENT': {
+                    name: 'Disconnect Event',
+                    value: 'DISCONNECT_EVENT'
+                },
+                'ENTITY_CREATED': {
+                    name: 'Entity Created',
+                    value: 'ENTITY_CREATED'
+                },
+                'ENTITY_UPDATED': {
+                    name: 'Entity Updated',
+                    value: 'ENTITY_UPDATED'
+                },
+                'ENTITY_DELETED': {
+                    name: 'Entity Deleted',
+                    value: 'ENTITY_DELETED'
+                },
+                'ENTITY_ASSIGNED': {
+                    name: 'Entity Assigned',
+                    value: 'ENTITY_ASSIGNED'
+                },
+                'ENTITY_UNASSIGNED': {
+                    name: 'Entity Unassigned',
+                    value: 'ENTITY_UNASSIGNED'
+                },
+                'ATTRIBUTES_UPDATED': {
+                    name: 'Attributes Updated',
+                    value: 'ATTRIBUTES_UPDATED'
+                },
+                'ATTRIBUTES_DELETED': {
+                    name: 'Attributes Deleted',
+                    value: 'ATTRIBUTES_DELETED'
                 }
             },
             valueType: {

@@ -1,5 +1,5 @@
 --
--- Copyright © 2016-2017 The Thingsboard Authors
+-- Copyright © 2016-2018 The Thingsboard Authors
 --
 -- Licensed under the Apache License, Version 2.0 (the "License");
 -- you may not use this file except in compliance with the License.
@@ -47,6 +47,21 @@ CREATE TABLE IF NOT EXISTS asset (
     type varchar(255)
 );
 
+CREATE TABLE IF NOT EXISTS audit_log (
+    id varchar(31) NOT NULL CONSTRAINT audit_log_pkey PRIMARY KEY,
+    tenant_id varchar(31),
+    customer_id varchar(31),
+    entity_id varchar(31),
+    entity_type varchar(255),
+    entity_name varchar(255),
+    user_id varchar(31),
+    user_name varchar(255),
+    action_type varchar(255),
+    action_data varchar(1000000),
+    action_status varchar(255),
+    action_failure_details varchar(1000000)
+);
+
 CREATE TABLE IF NOT EXISTS attribute_kv (
   entity_type varchar(255),
   entity_id varchar(31),
@@ -90,7 +105,7 @@ CREATE TABLE IF NOT EXISTS customer (
 CREATE TABLE IF NOT EXISTS dashboard (
     id varchar(31) NOT NULL CONSTRAINT dashboard_pkey PRIMARY KEY,
     configuration varchar(10000000),
-    customer_id varchar(31),
+    assigned_customers varchar(1000000),
     search_text varchar(255),
     tenant_id varchar(31),
     title varchar(255)
@@ -125,19 +140,6 @@ CREATE TABLE IF NOT EXISTS event (
     CONSTRAINT event_unq_key UNIQUE (tenant_id, entity_type, entity_id, event_type, event_uid)
 );
 
-CREATE TABLE IF NOT EXISTS plugin (
-    id varchar(31) NOT NULL CONSTRAINT plugin_pkey PRIMARY KEY,
-    additional_info varchar,
-    api_token varchar(255),
-    plugin_class varchar(255),
-    configuration varchar,
-    name varchar(255),
-    public_access boolean,
-    search_text varchar(255),
-    state varchar(255),
-    tenant_id varchar(31)
-);
-
 CREATE TABLE IF NOT EXISTS relation (
     from_id varchar(31),
     from_type varchar(255),
@@ -147,20 +149,6 @@ CREATE TABLE IF NOT EXISTS relation (
     relation_type varchar(255),
     additional_info varchar,
     CONSTRAINT relation_unq_key UNIQUE (from_id, from_type, relation_type_group, relation_type, to_id, to_type)
-);
-
-CREATE TABLE IF NOT EXISTS rule (
-    id varchar(31) NOT NULL CONSTRAINT rule_pkey PRIMARY KEY,
-    action varchar,
-    additional_info varchar,
-    filters varchar,
-    name varchar(255),
-    plugin_token varchar(255),
-    processor varchar,
-    search_text varchar(255),
-    state varchar(255),
-    tenant_id varchar(31),
-    weight integer
 );
 
 CREATE TABLE IF NOT EXISTS tb_user (
@@ -239,4 +227,27 @@ CREATE TABLE IF NOT EXISTS widgets_bundle (
     search_text varchar(255),
     tenant_id varchar(31),
     title varchar(255)
+);
+
+CREATE TABLE IF NOT EXISTS rule_chain (
+    id varchar(31) NOT NULL CONSTRAINT rule_chain_pkey PRIMARY KEY,
+    additional_info varchar,
+    configuration varchar(10000000),
+    name varchar(255),
+    first_rule_node_id varchar(31),
+    root boolean,
+    debug_mode boolean,
+    search_text varchar(255),
+    tenant_id varchar(31)
+);
+
+CREATE TABLE IF NOT EXISTS rule_node (
+    id varchar(31) NOT NULL CONSTRAINT rule_node_pkey PRIMARY KEY,
+    rule_chain_id varchar(31),
+    additional_info varchar,
+    configuration varchar(10000000),
+    type varchar(255),
+    name varchar(255),
+    debug_mode boolean,
+    search_text varchar(255)
 );

@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,10 @@
 @import '../../scss/constants';
 
 .tb-details-title {
-  font-size: 1.600rem;
+  font-size: 1.000rem;
+  @media (min-width: $layout-breakpoint-gt-sm) {
+    font-size: 1.600rem;
+  }
   font-weight: 400;
   text-transform: uppercase;
   margin: 20px 8px 0 0;
@@ -45,14 +48,11 @@ md-sidenav.tb-sidenav-details {
   width: 100% !important;
   max-width: 100% !important;
   z-index: 59 !important;
-  @media (min-width: $layout-breakpoint-sm) {
+  @media (min-width: $layout-breakpoint-gt-sm) {
     width: 80% !important;
   }
-  @media (min-width: $layout-breakpoint-md) {
+  @media (min-width: $layout-breakpoint-gt-md) {
     width: 65% !important;
-  }
-  @media (min-width: $layout-breakpoint-lg) {
-    width: 45% !important;
   }
   tb-dashboard {
     md-content {

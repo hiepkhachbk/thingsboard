@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,18 +15,17 @@
  */
 package org.thingsboard.server.dao;
 
+import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.Session;
 import org.cassandraunit.BaseCassandraUnit;
 import org.cassandraunit.CQLDataLoader;
 import org.cassandraunit.dataset.CQLDataSet;
 import org.cassandraunit.utils.EmbeddedCassandraServerHelper;
 
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.Session;
-
 import java.util.List;
 
 public class CustomCassandraCQLUnit extends BaseCassandraUnit {
-    private List<CQLDataSet> dataSets;
+    protected List<CQLDataSet> dataSets;
 
     public Session session;
     public Cluster cluster;

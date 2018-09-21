@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.thingsboard.server.install;
 
 import lombok.extern.slf4j.Slf4j;
@@ -24,11 +23,10 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.thingsboard.server.service.component.ComponentDiscoveryService;
+import org.thingsboard.server.service.install.DataUpdateService;
 import org.thingsboard.server.service.install.DatabaseSchemaService;
 import org.thingsboard.server.service.install.DatabaseUpgradeService;
 import org.thingsboard.server.service.install.SystemDataLoaderService;
-
-import java.nio.file.Paths;
 
 @Service
 @Profile("install")
@@ -40,9 +38,6 @@ public class ThingsboardInstallService {
 
     @Value("${install.upgrade.from_version:1.2.3}")
     private String upgradeFromVersion;
-
-    @Value("${install.data_dir}")
-    private String dataDir;
 
     @Value("${install.load_demo:false}")
     private Boolean loadDemo;
@@ -62,6 +57,9 @@ public class ThingsboardInstallService {
     @Autowired
     private SystemDataLoaderService systemDataLoaderService;
 
+    @Autowired
+    private DataUpdateService dataUpdateService;
+
     public void performInstall() {
         try {
             if (isUpgrade) {
@@ -73,20 +71,22 @@ public class ThingsboardInstallService {
 
                         databaseUpgradeService.upgradeDatabase("1.2.3");
 
-                        log.info("Updating system data...");
-
-                        systemDataLoaderService.deleteSystemWidgetBundle("charts");
-                        systemDataLoaderService.deleteSystemWidgetBundle("cards");
-                        systemDataLoaderService.deleteSystemWidgetBundle("maps");
-                        systemDataLoaderService.deleteSystemWidgetBundle("analogue_gauges");
-                        systemDataLoaderService.deleteSystemWidgetBundle("digital_gauges");
-                        systemDataLoaderService.deleteSystemWidgetBundle("gpio_widgets");
-                        systemDataLoaderService.deleteSystemWidgetBundle("alarm_widgets");
-
-                    case "1.3.0":
+                    case "1.3.0":  //NOSONAR, Need to execute gradual upgrade starting from upgradeFromVersion
                         log.info("Upgrading ThingsBoard from version 1.3.0 to 1.3.1 ...");
 
                         databaseUpgradeService.upgradeDatabase("1.3.0");
+
+                    case "1.3.1": //NOSONAR, Need to execute gradual upgrade starting from upgradeFromVersion
+                        log.info("Upgrading ThingsBoard from version 1.3.1 to 1.4.0 ...");
+
+                        databaseUpgradeService.upgradeDatabase("1.3.1");
+
+                    case "1.4.0":
+                        log.info("Upgrading ThingsBoard from version 1.4.0 to 2.0.0 ...");
+
+                        databaseUpgradeService.upgradeDatabase("1.4.0");
+
+                        dataUpdateService.updateData("1.4.0");
 
                         log.info("Updating system data...");
 
@@ -99,6 +99,7 @@ public class ThingsboardInstallService {
                         systemDataLoaderService.deleteSystemWidgetBundle("alarm_widgets");
                         systemDataLoaderService.deleteSystemWidgetBundle("control_widgets");
                         systemDataLoaderService.deleteSystemWidgetBundle("maps_v2");
+                        systemDataLoaderService.deleteSystemWidgetBundle("gateway_widgets");
 
                         systemDataLoaderService.loadSystemWidgets();
 
@@ -113,13 +114,6 @@ public class ThingsboardInstallService {
 
                 log.info("Starting ThingsBoard Installation...");
 
-                if (this.dataDir == null) {
-                    throw new RuntimeException("'install.data_dir' property should specified!");
-                }
-                if (!Paths.get(this.dataDir).toFile().isDirectory()) {
-                    throw new RuntimeException("'install.data_dir' property value is not a valid directory!");
-                }
-
                 log.info("Installing DataBase schema...");
 
                 databaseSchemaService.createDatabaseSchema();
@@ -131,8 +125,8 @@ public class ThingsboardInstallService {
                 systemDataLoaderService.createSysAdmin();
                 systemDataLoaderService.createAdminSettings();
                 systemDataLoaderService.loadSystemWidgets();
-                systemDataLoaderService.loadSystemPlugins();
-                systemDataLoaderService.loadSystemRules();
+//                systemDataLoaderService.loadSystemPlugins();
+//                systemDataLoaderService.loadSystemRules();
 
                 if (loadDemo) {
                     log.info("Loading demo data...");

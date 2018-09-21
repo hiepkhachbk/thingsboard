@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,23 +41,23 @@ public class JpaBaseComponentDescriptorDaoTest extends AbstractJpaDaoTest {
     @Test
     public void findByType() {
         for (int i = 0; i < 20; i++) {
-            createComponentDescriptor(ComponentType.PLUGIN, ComponentScope.SYSTEM, i);
+            createComponentDescriptor(ComponentType.FILTER, ComponentScope.SYSTEM, i);
             createComponentDescriptor(ComponentType.ACTION, ComponentScope.TENANT, i + 20);
         }
 
         TextPageLink pageLink1 = new TextPageLink(15, "COMPONENT_");
-        List<ComponentDescriptor> components1 = componentDescriptorDao.findByTypeAndPageLink(ComponentType.PLUGIN, pageLink1);
+        List<ComponentDescriptor> components1 = componentDescriptorDao.findByTypeAndPageLink(ComponentType.FILTER, pageLink1);
         assertEquals(15, components1.size());
 
         TextPageLink pageLink2 = new TextPageLink(15, "COMPONENT_", components1.get(14).getId().getId(), null);
-        List<ComponentDescriptor> components2 = componentDescriptorDao.findByTypeAndPageLink(ComponentType.PLUGIN, pageLink2);
+        List<ComponentDescriptor> components2 = componentDescriptorDao.findByTypeAndPageLink(ComponentType.FILTER, pageLink2);
         assertEquals(5, components2.size());
     }
 
     @Test
     public void findByTypeAndSocpe() {
         for (int i = 0; i < 20; i++) {
-            createComponentDescriptor(ComponentType.PLUGIN, ComponentScope.SYSTEM, i);
+            createComponentDescriptor(ComponentType.ENRICHMENT, ComponentScope.SYSTEM, i);
             createComponentDescriptor(ComponentType.ACTION, ComponentScope.TENANT, i + 20);
             createComponentDescriptor(ComponentType.FILTER, ComponentScope.SYSTEM, i + 40);
         }

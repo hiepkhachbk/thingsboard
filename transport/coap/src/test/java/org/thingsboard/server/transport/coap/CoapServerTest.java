@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,6 +50,7 @@ import org.thingsboard.server.common.msg.session.*;
 import org.thingsboard.server.common.transport.SessionMsgProcessor;
 import org.thingsboard.server.common.transport.auth.DeviceAuthResult;
 import org.thingsboard.server.common.transport.auth.DeviceAuthService;
+import org.thingsboard.server.common.transport.quota.host.HostRequestsQuotaService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -107,14 +108,14 @@ public class CoapServerTest {
 
                 @Override
                 public void process(SessionAwareMsg toActorMsg) {
-                    if (toActorMsg instanceof ToDeviceActorSessionMsg) {
-                        AdaptorToSessionActorMsg sessionMsg = ((ToDeviceActorSessionMsg) toActorMsg).getSessionMsg();
+                    if (toActorMsg instanceof TransportToDeviceSessionActorMsg) {
+                        AdaptorToSessionActorMsg sessionMsg = ((TransportToDeviceSessionActorMsg) toActorMsg).getSessionMsg();
                         try {
                             FromDeviceMsg deviceMsg = sessionMsg.getMsg();
                             ToDeviceMsg toDeviceMsg = null;
-                            if (deviceMsg.getMsgType() == MsgType.POST_TELEMETRY_REQUEST) {
+                            if (deviceMsg.getMsgType() == SessionMsgType.POST_TELEMETRY_REQUEST) {
                                 toDeviceMsg = BasicStatusCodeResponse.onSuccess(deviceMsg.getMsgType(), BasicRequest.DEFAULT_REQUEST_ID);
-                            } else if (deviceMsg.getMsgType() == MsgType.GET_ATTRIBUTES_REQUEST) {
+                            } else if (deviceMsg.getMsgType() == SessionMsgType.GET_ATTRIBUTES_REQUEST) {
                                 List<AttributeKvEntry> data = new ArrayList<>();
                                 data.add(new BaseAttributeKvEntry(new StringDataEntry("key1", "value1"), System.currentTimeMillis()));
                                 data.add(new BaseAttributeKvEntry(new LongDataEntry("key2", 42L), System.currentTimeMillis()));
@@ -129,7 +130,19 @@ public class CoapServerTest {
                         }
                     }
                 }
+
+                @Override
+                public void onDeviceAdded(Device device) {
+
+                }
+
+
             };
+        }
+
+        @Bean
+        public static HostRequestsQuotaService quotaService() {
+            return new HostRequestsQuotaService(null, null, null, null, false);
         }
     }
 

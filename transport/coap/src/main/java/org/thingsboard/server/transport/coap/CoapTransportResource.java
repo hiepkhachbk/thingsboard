@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,11 +34,10 @@ import org.thingsboard.server.common.msg.session.*;
 import org.thingsboard.server.common.transport.SessionMsgProcessor;
 import org.thingsboard.server.common.transport.adaptor.AdaptorException;
 import org.thingsboard.server.common.transport.auth.DeviceAuthService;
+import org.thingsboard.server.common.transport.quota.QuotaService;
 import org.thingsboard.server.transport.coap.adaptors.CoapTransportAdaptor;
 import org.thingsboard.server.transport.coap.session.CoapExchangeObserverProxy;
 import org.thingsboard.server.transport.coap.session.CoapSessionCtx;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.util.ReflectionUtils;
 
 @Slf4j
@@ -51,13 +50,16 @@ public class CoapTransportResource extends CoapResource {
     private final CoapTransportAdaptor adaptor;
     private final SessionMsgProcessor processor;
     private final DeviceAuthService authService;
+    private final QuotaService quotaService;
     private final Field observerField;
     private final long timeout;
 
-    public CoapTransportResource(SessionMsgProcessor processor, DeviceAuthService authService, CoapTransportAdaptor adaptor, String name, long timeout) {
+    public CoapTransportResource(SessionMsgProcessor processor, DeviceAuthService authService, CoapTransportAdaptor adaptor, String name,
+                                 long timeout, QuotaService quotaService) {
         super(name);
         this.processor = processor;
         this.authService = authService;
+        this.quotaService = quotaService;
         this.adaptor = adaptor;
         this.timeout = timeout;
         // This is important to turn off existing observable logic in
@@ -70,6 +72,12 @@ public class CoapTransportResource extends CoapResource {
 
     @Override
     public void handleGET(CoapExchange exchange) {
+        if(quotaService.isQuotaExceeded(exchange.getSourceAddress().getHostAddress())) {
+            log.warn("COAP Quota exceeded for [{}:{}] . Disconnect", exchange.getSourceAddress().getHostAddress(), exchange.getSourcePort());
+            exchange.respond(ResponseCode.BAD_REQUEST);
+            return;
+        }
+
         Optional<FeatureType> featureType = getFeatureType(exchange.advanced().getRequest());
         if (!featureType.isPresent()) {
             log.trace("Missing feature type parameter");
@@ -80,7 +88,7 @@ public class CoapTransportResource extends CoapResource {
         } else if (exchange.getRequestOptions().hasObserve()) {
             processExchangeGetRequest(exchange, featureType.get());
         } else if (featureType.get() == FeatureType.ATTRIBUTES) {
-            processRequest(exchange, MsgType.GET_ATTRIBUTES_REQUEST);
+            processRequest(exchange, SessionMsgType.GET_ATTRIBUTES_REQUEST);
         } else {
             log.trace("Invalid feature type parameter");
             exchange.respond(ResponseCode.BAD_REQUEST);
@@ -89,13 +97,13 @@ public class CoapTransportResource extends CoapResource {
 
     private void processExchangeGetRequest(CoapExchange exchange, FeatureType featureType) {
         boolean unsubscribe = exchange.getRequestOptions().getObserve() == 1;
-        MsgType msgType;
+        SessionMsgType sessionMsgType;
         if (featureType == FeatureType.RPC) {
-            msgType = unsubscribe ? MsgType.UNSUBSCRIBE_RPC_COMMANDS_REQUEST : MsgType.SUBSCRIBE_RPC_COMMANDS_REQUEST;
+            sessionMsgType = unsubscribe ? SessionMsgType.UNSUBSCRIBE_RPC_COMMANDS_REQUEST : SessionMsgType.SUBSCRIBE_RPC_COMMANDS_REQUEST;
         } else {
-            msgType = unsubscribe ? MsgType.UNSUBSCRIBE_ATTRIBUTES_REQUEST : MsgType.SUBSCRIBE_ATTRIBUTES_REQUEST;
+            sessionMsgType = unsubscribe ? SessionMsgType.UNSUBSCRIBE_ATTRIBUTES_REQUEST : SessionMsgType.SUBSCRIBE_ATTRIBUTES_REQUEST;
         }
-        Optional<SessionId> sessionId = processRequest(exchange, msgType);
+        Optional<SessionId> sessionId = processRequest(exchange, sessionMsgType);
         if (sessionId.isPresent()) {
             if (exchange.getRequestOptions().getObserve() == 1) {
                 exchange.respond(ResponseCode.VALID);
@@ -112,24 +120,24 @@ public class CoapTransportResource extends CoapResource {
         } else {
             switch (featureType.get()) {
                 case ATTRIBUTES:
-                    processRequest(exchange, MsgType.POST_ATTRIBUTES_REQUEST);
+                    processRequest(exchange, SessionMsgType.POST_ATTRIBUTES_REQUEST);
                     break;
                 case TELEMETRY:
-                    processRequest(exchange, MsgType.POST_TELEMETRY_REQUEST);
+                    processRequest(exchange, SessionMsgType.POST_TELEMETRY_REQUEST);
                     break;
                 case RPC:
                     Optional<Integer> requestId = getRequestId(exchange.advanced().getRequest());
                     if (requestId.isPresent()) {
-                        processRequest(exchange, MsgType.TO_DEVICE_RPC_RESPONSE);
+                        processRequest(exchange, SessionMsgType.TO_DEVICE_RPC_RESPONSE);
                     } else {
-                        processRequest(exchange, MsgType.TO_SERVER_RPC_REQUEST);
+                        processRequest(exchange, SessionMsgType.TO_SERVER_RPC_REQUEST);
                     }
                     break;
             }
         }
     }
 
-    private Optional<SessionId> processRequest(CoapExchange exchange, MsgType type) {
+    private Optional<SessionId> processRequest(CoapExchange exchange, SessionMsgType type) {
         log.trace("Processing {}", exchange.advanced().getRequest());
         exchange.accept();
         Exchange advanced = exchange.advanced();
@@ -176,7 +184,7 @@ public class CoapTransportResource extends CoapResource {
                     throw new IllegalArgumentException("Unsupported msg type: " + type);
             }
             log.trace("Processing msg: {}", msg);
-            processor.process(new BasicToDeviceActorSessionMsg(ctx.getDevice(), msg));
+            processor.process(new BasicTransportToDeviceSessionActorMsg(ctx.getDevice(), msg));
         } catch (AdaptorException e) {
             log.debug("Failed to decode payload {}", e);
             exchange.respond(ResponseCode.BAD_REQUEST, e.getMessage());

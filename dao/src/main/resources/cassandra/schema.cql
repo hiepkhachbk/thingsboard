@@ -1,5 +1,5 @@
 --
--- Copyright © 2016-2017 The Thingsboard Authors
+-- Copyright © 2016-2018 The Thingsboard Authors
 --
 -- Licensed under the Apache License, Version 2.0 (the "License");
 -- you may not use this file except in compliance with the License.
@@ -364,26 +364,19 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS thingsboard.widget_type_by_tenant_and_ali
 CREATE TABLE IF NOT EXISTS thingsboard.dashboard (
 	id timeuuid,
 	tenant_id timeuuid,
-	customer_id timeuuid,
 	title text,
 	search_text text,
+	assigned_customers text,
 	configuration text,
-	PRIMARY KEY (id, tenant_id, customer_id)
+	PRIMARY KEY (id, tenant_id)
 );
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS thingsboard.dashboard_by_tenant_and_search_text AS
 	SELECT *
 	from thingsboard.dashboard
-	WHERE tenant_id IS NOT NULL AND customer_id IS NOT NULL AND search_text IS NOT NULL AND id IS NOT NULL
-	PRIMARY KEY ( tenant_id, search_text, id, customer_id )
-	WITH CLUSTERING ORDER BY ( search_text ASC, id DESC, customer_id DESC );
-
-CREATE MATERIALIZED VIEW IF NOT EXISTS thingsboard.dashboard_by_customer_and_search_text AS
-	SELECT *
-	from thingsboard.dashboard
-	WHERE tenant_id IS NOT NULL AND customer_id IS NOT NULL AND search_text IS NOT NULL AND id IS NOT NULL
-	PRIMARY KEY ( customer_id, tenant_id, search_text, id )
-	WITH CLUSTERING ORDER BY ( tenant_id DESC, search_text ASC, id DESC );
+	WHERE tenant_id IS NOT NULL AND search_text IS NOT NULL AND id IS NOT NULL
+	PRIMARY KEY ( tenant_id, search_text, id )
+	WITH CLUSTERING ORDER BY ( search_text ASC, id DESC );
 
 CREATE TABLE IF NOT EXISTS thingsboard.ts_kv_cf (
     entity_type text, // (DEVICE, CUSTOMER, TENANT)
@@ -435,7 +428,7 @@ CREATE TABLE IF NOT EXISTS thingsboard.attributes_kv_cf (
 
 CREATE TABLE IF NOT EXISTS  thingsboard.component_descriptor (
     id timeuuid,
-    type text, //("FILTER", "PROCESSOR", "ACTION", "PLUGIN")
+    type text,
     scope text,
     name text,
     search_text text,
@@ -466,67 +459,12 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS thingsboard.component_desc_by_id AS
     PRIMARY KEY ( id, clazz, scope, type )
     WITH CLUSTERING ORDER BY ( clazz ASC, scope ASC, type DESC);
 
-CREATE TABLE IF NOT EXISTS  thingsboard.rule (
-    id timeuuid,
-    tenant_id timeuuid,
-    name text,
-    state text,
-    search_text text,
-    weight int,
-    plugin_token text,
-    filters text, // Format: {"clazz":"A", "name": "Filter A", "configuration": {"types":["TELEMETRY"]}}
-    processor text, // Format: {"clazz":"A", "name": "Processor A", "configuration": null}
-    action text, // Format: {"clazz":"A", "name": "Action A", "configuration": null}
-    additional_info text,
-    PRIMARY KEY (id, tenant_id)
-);
-
-CREATE MATERIALIZED VIEW IF NOT EXISTS thingsboard.rule_by_plugin_token AS
-    SELECT *
-
-    FROM thingsboard.rule
-    WHERE tenant_id IS NOT NULL AND id IS NOT NULL AND plugin_token IS NOT NULL
-    PRIMARY KEY (plugin_token, tenant_id, id) WITH CLUSTERING ORDER BY (tenant_id DESC, id DESC);
-
-CREATE MATERIALIZED VIEW IF NOT EXISTS thingsboard.rule_by_tenant_and_search_text AS
-    SELECT *
-    FROM thingsboard.rule
-    WHERE tenant_id IS NOT NULL AND id IS NOT NULL AND search_text IS NOT NULL
-    PRIMARY KEY (tenant_id, search_text, id) WITH CLUSTERING ORDER BY (search_text ASC);
-
-CREATE TABLE IF NOT EXISTS  thingsboard.plugin (
-    id uuid,
-    tenant_id uuid,
-    name text,
-    state text,
-    search_text text,
-    api_token text,
-    plugin_class text,
-    public_access boolean,
-    configuration text,
-    additional_info text,
-    PRIMARY KEY (id, tenant_id)
-);
-
-CREATE MATERIALIZED VIEW IF NOT EXISTS thingsboard.plugin_by_api_token AS
-    SELECT *
-    FROM thingsboard.plugin
-    WHERE api_token IS NOT NULL AND id IS NOT NULL AND tenant_id IS NOT NULL
-    PRIMARY KEY (api_token, id, tenant_id) WITH CLUSTERING ORDER BY (id DESC);
-
-CREATE MATERIALIZED VIEW IF NOT EXISTS thingsboard.plugin_by_tenant_and_search_text AS
-    SELECT *
-    from thingsboard.plugin
-    WHERE tenant_id IS NOT NULL AND search_text IS NOT NULL AND id IS NOT NULL
-    PRIMARY KEY ( tenant_id, search_text, id )
-    WITH CLUSTERING ORDER BY ( search_text ASC, id DESC );
-
 CREATE TABLE IF NOT EXISTS thingsboard.event (
 	tenant_id timeuuid, // tenant or system
 	id timeuuid,
 	event_type text,
 	event_uid text,
-	entity_type text, // (device, customer, rule, plugin)
+	entity_type text,
 	entity_id timeuuid,
 	body text,
 	PRIMARY KEY ((tenant_id, entity_type, entity_id), event_type, event_uid)
@@ -548,3 +486,155 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS thingsboard.event_by_id AS
     AND event_type IS NOT NULL AND event_uid IS NOT NULL
     PRIMARY KEY ((tenant_id, entity_type, entity_id), id, event_type, event_uid)
     WITH CLUSTERING ORDER BY (id ASC, event_type ASC, event_uid ASC);
+
+CREATE TABLE IF NOT EXISTS thingsboard.audit_log_by_entity_id (
+  tenant_id timeuuid,
+  id timeuuid,
+  customer_id timeuuid,
+  entity_id timeuuid,
+  entity_type text,
+  entity_name text,
+  user_id timeuuid,
+  user_name text,
+  action_type text,
+  action_data text,
+  action_status text,
+  action_failure_details text,
+  PRIMARY KEY ((tenant_id, entity_id, entity_type), id)
+);
+
+CREATE TABLE IF NOT EXISTS thingsboard.audit_log_by_customer_id (
+  tenant_id timeuuid,
+  id timeuuid,
+  customer_id timeuuid,
+  entity_id timeuuid,
+  entity_type text,
+  entity_name text,
+  user_id timeuuid,
+  user_name text,
+  action_type text,
+  action_data text,
+  action_status text,
+  action_failure_details text,
+  PRIMARY KEY ((tenant_id, customer_id), id)
+);
+
+CREATE TABLE IF NOT EXISTS thingsboard.audit_log_by_user_id (
+  tenant_id timeuuid,
+  id timeuuid,
+  customer_id timeuuid,
+  entity_id timeuuid,
+  entity_type text,
+  entity_name text,
+  user_id timeuuid,
+  user_name text,
+  action_type text,
+  action_data text,
+  action_status text,
+  action_failure_details text,
+  PRIMARY KEY ((tenant_id, user_id), id)
+);
+
+CREATE TABLE IF NOT EXISTS thingsboard.audit_log_by_tenant_id (
+  tenant_id timeuuid,
+  id timeuuid,
+  partition bigint,
+  customer_id timeuuid,
+  entity_id timeuuid,
+  entity_type text,
+  entity_name text,
+  user_id timeuuid,
+  user_name text,
+  action_type text,
+  action_data text,
+  action_status text,
+  action_failure_details text,
+  PRIMARY KEY ((tenant_id, partition), id)
+);
+
+CREATE TABLE IF NOT EXISTS thingsboard.audit_log_by_tenant_id_partitions (
+  tenant_id timeuuid,
+  partition bigint,
+  PRIMARY KEY (( tenant_id ), partition)
+) WITH CLUSTERING ORDER BY ( partition ASC )
+AND compaction = { 'class' :  'LeveledCompactionStrategy'  };
+
+CREATE TABLE IF NOT EXISTS thingsboard.msg_queue (
+    node_id         timeuuid,
+    cluster_partition    bigint,
+    ts_partition       bigint,
+    ts              bigint,
+    msg             blob,
+	PRIMARY KEY ((node_id, cluster_partition, ts_partition), ts))
+WITH CLUSTERING ORDER BY (ts DESC)
+AND compaction = {
+    'class': 'org.apache.cassandra.db.compaction.DateTieredCompactionStrategy',
+    'min_threshold': '5',
+    'base_time_seconds': '43200',
+    'max_window_size_seconds': '43200',
+    'tombstone_threshold': '0.9',
+    'unchecked_tombstone_compaction': 'true'
+};
+
+CREATE TABLE IF NOT EXISTS thingsboard.msg_ack_queue (
+    node_id         timeuuid,
+    cluster_partition    bigint,
+    ts_partition       bigint,
+    msg_id              timeuuid,
+	PRIMARY KEY ((node_id, cluster_partition, ts_partition), msg_id))
+WITH CLUSTERING ORDER BY (msg_id DESC)
+AND compaction = {
+    'class': 'org.apache.cassandra.db.compaction.DateTieredCompactionStrategy',
+    'min_threshold': '5',
+    'base_time_seconds': '43200',
+    'max_window_size_seconds': '43200',
+    'tombstone_threshold': '0.9',
+    'unchecked_tombstone_compaction': 'true'
+};
+
+CREATE TABLE IF NOT EXISTS thingsboard.processed_msg_partitions (
+    node_id         timeuuid,
+    cluster_partition    bigint,
+    ts_partition       bigint,
+	PRIMARY KEY ((node_id, cluster_partition), ts_partition))
+WITH CLUSTERING ORDER BY (ts_partition DESC)
+AND compaction = {
+    'class': 'org.apache.cassandra.db.compaction.DateTieredCompactionStrategy',
+    'min_threshold': '5',
+    'base_time_seconds': '43200',
+    'max_window_size_seconds': '43200',
+    'tombstone_threshold': '0.9',
+    'unchecked_tombstone_compaction': 'true'
+};
+
+CREATE TABLE IF NOT EXISTS  thingsboard.rule_chain (
+    id uuid,
+    tenant_id uuid,
+    name text,
+    search_text text,
+    first_rule_node_id uuid,
+    root boolean,
+    debug_mode boolean,
+    configuration text,
+    additional_info text,
+    PRIMARY KEY (id, tenant_id)
+);
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS thingsboard.rule_chain_by_tenant_and_search_text AS
+    SELECT *
+    from thingsboard.rule_chain
+    WHERE tenant_id IS NOT NULL AND search_text IS NOT NULL AND id IS NOT NULL
+    PRIMARY KEY ( tenant_id, search_text, id )
+    WITH CLUSTERING ORDER BY ( search_text ASC, id DESC );
+
+CREATE TABLE IF NOT EXISTS  thingsboard.rule_node (
+    id uuid,
+    rule_chain_id uuid,
+    type text,
+    name text,
+    debug_mode boolean,
+    search_text text,
+    configuration text,
+    additional_info text,
+    PRIMARY KEY (id)
+);

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,6 @@
  */
 import injectTapEventPlugin from 'react-tap-event-plugin';
 import UrlHandler from './url.handler';
-import addLocaleKorean from './locale/locale.constant-ko';
-import addLocaleChinese from './locale/locale.constant-zh';
-import addLocaleRussian from './locale/locale.constant-ru';
-import addLocaleSpanish from './locale/locale.constant-es';
 
 /* eslint-disable import/no-unresolved, import/default */
 
@@ -38,44 +34,28 @@ export default function AppConfig($provide,
                                   $mdThemingProvider,
                                   $httpProvider,
                                   $translateProvider,
-                                  storeProvider,
-                                  locales) {
+                                  storeProvider) {
 
     injectTapEventPlugin();
     $locationProvider.html5Mode(true);
     $urlRouterProvider.otherwise(UrlHandler);
     storeProvider.setCaching(false);
-
-    $translateProvider.useSanitizeValueStrategy(null);
-    $translateProvider.preferredLanguage('en_US');
-    $translateProvider.useLocalStorage();
-    $translateProvider.useMissingTranslationHandler('tbMissingTranslationHandler');
-    $translateProvider.addInterpolation('$translateMessageFormatInterpolation');
-
-    addLocaleKorean(locales);
-    addLocaleChinese(locales);
-    addLocaleRussian(locales);
-    addLocaleSpanish(locales);
-
-    var $window = angular.injector(['ng']).get('$window');
-    var lang = $window.navigator.language || $window.navigator.userLanguage;
-    if (lang) {
-        lang = lang.toLowerCase();
-        if (lang.startsWith('ko')) {
-            $translateProvider.preferredLanguage('ko_KR');
-        } else if (lang.startsWith('zh')) {
-            $translateProvider.preferredLanguage('zh_CN');
-        } else if (lang.startsWith('es')) {
-            $translateProvider.preferredLanguage('es_ES');
-        } else if (lang.startsWith('ru')) {
-            $translateProvider.preferredLanguage('ru_RU');
-        }
-    }
-
-    for (var langKey in locales) {
-        var translationTable = locales[langKey];
-        $translateProvider.translations(langKey, translationTable);
-    }
+    
+    $translateProvider.useSanitizeValueStrategy(null)
+                      .useMissingTranslationHandler('tbMissingTranslationHandler')
+                      .addInterpolation('$translateMessageFormatInterpolation')
+                      .useStaticFilesLoader({
+                          files: [
+                              {
+                                  prefix: PUBLIC_PATH + 'locale/locale.constant-', //eslint-disable-line
+                                  suffix: '.json'
+                              }
+                          ]
+                      })
+                      .registerAvailableLanguageKeys(SUPPORTED_LANGS, getLanguageAliases(SUPPORTED_LANGS)) //eslint-disable-line
+                      .fallbackLanguage('en_US') // must be before determinePreferredLanguage   
+                      .uniformLanguageTag('java')  // must be before determinePreferredLanguage
+                      .determinePreferredLanguage();                
 
     $httpProvider.interceptors.push('globalInterceptor');
 
@@ -166,4 +146,24 @@ export default function AppConfig($provide,
         //$mdThemingProvider.alwaysWatchTheme(true);
     }
 
+    function getLanguageAliases(supportedLangs) {
+        var aliases = {};
+
+        supportedLangs.sort().forEach(function(item, index, array) {
+            if (item.length === 2) { 
+                aliases[item] = item;
+                aliases[item + '_*'] = item;
+            } else {
+                var key = item.slice(0, 2);
+                if (index === 0 || key !== array[index - 1].slice(0, 2)) {
+                    aliases[key] = item;
+                    aliases[key + '_*'] = item;
+                } else {
+                    aliases[item] = item;
+                }
+            }
+        });
+        
+        return aliases;
+    }
 }

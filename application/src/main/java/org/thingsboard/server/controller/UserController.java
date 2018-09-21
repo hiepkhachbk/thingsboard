@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,20 @@ package org.thingsboard.server.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+import org.thingsboard.rule.engine.api.MailService;
+import org.thingsboard.server.common.data.EntityType;
 import org.thingsboard.server.common.data.User;
+import org.thingsboard.server.common.data.audit.ActionType;
+import org.thingsboard.server.common.data.exception.ThingsboardErrorCode;
+import org.thingsboard.server.common.data.exception.ThingsboardException;
 import org.thingsboard.server.common.data.id.CustomerId;
 import org.thingsboard.server.common.data.id.TenantId;
 import org.thingsboard.server.common.data.id.UserId;
@@ -27,9 +39,6 @@ import org.thingsboard.server.common.data.page.TextPageData;
 import org.thingsboard.server.common.data.page.TextPageLink;
 import org.thingsboard.server.common.data.security.Authority;
 import org.thingsboard.server.common.data.security.UserCredentials;
-import org.thingsboard.server.exception.ThingsboardErrorCode;
-import org.thingsboard.server.exception.ThingsboardException;
-import org.thingsboard.server.service.mail.MailService;
 import org.thingsboard.server.service.security.model.SecurityUser;
 
 import javax.servlet.http.HttpServletRequest;
@@ -92,8 +101,17 @@ public class UserController extends BaseController {
                     throw e;
                 }
             }
+
+            logEntityAction(savedUser.getId(), savedUser,
+                    savedUser.getCustomerId(),
+                    user.getId() == null ? ActionType.ADDED : ActionType.UPDATED, null);
+
             return savedUser;
         } catch (Exception e) {
+
+            logEntityAction(emptyId(EntityType.USER), user,
+                    null, user.getId() == null ? ActionType.ADDED : ActionType.UPDATED, e);
+
             throw handleException(e);
         }
     }
@@ -156,9 +174,18 @@ public class UserController extends BaseController {
         checkParameter(USER_ID, strUserId);
         try {
             UserId userId = new UserId(toUUID(strUserId));
-            checkUserId(userId);
+            User user = checkUserId(userId);
             userService.deleteUser(userId);
+
+            logEntityAction(userId, user,
+                    user.getCustomerId(),
+                    ActionType.DELETED, null, strUserId);
+
         } catch (Exception e) {
+            logEntityAction(emptyId(EntityType.USER),
+                    null,
+                    null,
+                    ActionType.DELETED, e, strUserId);
             throw handleException(e);
         }
     }

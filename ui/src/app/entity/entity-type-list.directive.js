@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 /* eslint-disable import/no-unresolved, import/default */
 
 import entityTypeListTemplate from './entity-type-list.tpl.html';
@@ -36,7 +35,30 @@ export default function EntityTypeListDirective($compile, $templateCache, $q, $m
                                 : $translate.instant('entity.any-entity');
         scope.secondaryPlaceholder = '+' + $translate.instant('entity.entity-type');
 
-        var entityTypes = entityService.prepareAllowedEntityTypesList(scope.allowedEntityTypes);
+        var entityTypes;
+
+        if (scope.ignoreAuthorityFilter && scope.allowedEntityTypes
+            && scope.allowedEntityTypes.length) {
+            entityTypes = {};
+            scope.allowedEntityTypes.forEach((entityTypeValue) => {
+                var entityType = entityTypeFromValue(entityTypeValue);
+                if (entityType) {
+                    entityTypes[entityType] = entityTypeValue;
+                }
+            });
+        } else {
+            entityTypes = entityService.prepareAllowedEntityTypesList(scope.allowedEntityTypes);
+        }
+
+        function entityTypeFromValue(entityTypeValue) {
+            for (var entityType in types.entityType) {
+                if (types.entityType[entityType] === entityTypeValue) {
+                    return entityType;
+                }
+            }
+            return null;
+        }
+
         scope.entityTypesList = [];
         for (var type in entityTypes) {
             var entityTypeInfo = {};
@@ -63,28 +85,43 @@ export default function EntityTypeListDirective($compile, $templateCache, $q, $m
         }
 
         ngModelCtrl.$render = function () {
-            scope.entityTypeList = [];
+            if (scope.entityTypeListWatch) {
+                scope.entityTypeListWatch();
+                scope.entityTypeListWatch = null;
+            }
+            var entityTypeList = [];
             var value = ngModelCtrl.$viewValue;
             if (value && value.length) {
                 value.forEach(function(type) {
                     var entityTypeInfo = {};
                     entityTypeInfo.value = type;
                     entityTypeInfo.name = $translate.instant(types.entityTypeTranslations[entityTypeInfo.value].type) + '';
-                    scope.entityTypeList.push(entityTypeInfo);
+                    entityTypeList.push(entityTypeInfo);
                 });
             }
+            scope.entityTypeList = entityTypeList;
+            scope.entityTypeListWatch = scope.$watch('entityTypeList', function (newVal, prevVal) {
+                if (!angular.equals(newVal, prevVal)) {
+                    updateEntityTypeList();
+                }
+            }, true);
         }
 
-        scope.$watch('entityTypeList', function () {
-            var values = [];
+        function updateEntityTypeList() {
+            var values = ngModelCtrl.$viewValue;
+            if (!values) {
+                values = [];
+                ngModelCtrl.$setViewValue(values);
+            } else {
+                values.length = 0;
+            }
             if (scope.entityTypeList && scope.entityTypeList.length) {
-                scope.entityTypeList.forEach(function(entityType) {
+                scope.entityTypeList.forEach(function (entityType) {
                     values.push(entityType.value);
                 });
             }
-            ngModelCtrl.$setViewValue(values);
             scope.updateValidity();
-        }, true);
+        }
 
         $compile(element.contents())(scope);
 
@@ -104,7 +141,8 @@ export default function EntityTypeListDirective($compile, $templateCache, $q, $m
         scope: {
             disabled:'=ngDisabled',
             tbRequired: '=?',
-            allowedEntityTypes: '=?'
+            allowedEntityTypes: '=?',
+            ignoreAuthorityFilter: '=?'
         }
     };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 export default class AliasController {
 
     constructor($scope, $q, $filter, utils, types, entityService, stateController, entityAliases) {
@@ -147,6 +146,7 @@ export default class AliasController {
                                     newDatasource.entityId = resolvedEntity.id;
                                     newDatasource.entityType = resolvedEntity.entityType;
                                     newDatasource.entityName = resolvedEntity.name;
+                                    newDatasource.entityDescription = resolvedEntity.entityDescription
                                     newDatasource.name = resolvedEntity.name;
                                     newDatasource.generated = i > 0 ? true : false;
                                     datasources.push(newDatasource);
@@ -168,6 +168,7 @@ export default class AliasController {
                                 datasource.entityType = entity.entityType;
                                 datasource.entityName = entity.name;
                                 datasource.name = entity.name;
+                                datasource.entityDescription = entity.entityDescription;
                                 deferred.resolve([datasource]);
                             } else {
                                 if (aliasInfo.stateEntity) {

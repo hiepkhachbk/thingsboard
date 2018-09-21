@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,10 +24,12 @@ import io.netty.util.ResourceLeakDetector;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import org.thingsboard.server.common.transport.SessionMsgProcessor;
 import org.thingsboard.server.common.transport.auth.DeviceAuthService;
+import org.thingsboard.server.common.transport.quota.host.HostRequestsQuotaService;
 import org.thingsboard.server.dao.device.DeviceService;
 import org.thingsboard.server.dao.relation.RelationService;
 import org.thingsboard.server.transport.mqtt.adaptors.MqttTransportAdaptor;
@@ -39,6 +41,7 @@ import javax.annotation.PreDestroy;
  * @author Andrew Shvayka
  */
 @Service("MqttTransportService")
+@ConditionalOnProperty(prefix = "mqtt", value = "enabled", havingValue = "true", matchIfMissing = false)
 @Slf4j
 public class MqttTransportService {
 
@@ -63,6 +66,9 @@ public class MqttTransportService {
     @Autowired(required = false)
     private MqttSslHandlerProvider sslHandlerProvider;
 
+    @Autowired(required = false)
+    private HostRequestsQuotaService quotaService;
+
     @Value("${mqtt.bind_address}")
     private String host;
     @Value("${mqtt.bind_port}")
@@ -76,7 +82,8 @@ public class MqttTransportService {
     private Integer bossGroupThreadCount;
     @Value("${mqtt.netty.worker_group_thread_count}")
     private Integer workerGroupThreadCount;
-
+    @Value("${mqtt.netty.max_payload_size}")
+    private Integer maxPayloadSize;
 
     private MqttTransportAdaptor adaptor;
 
@@ -99,7 +106,8 @@ public class MqttTransportService {
         ServerBootstrap b = new ServerBootstrap();
         b.group(bossGroup, workerGroup)
                 .channel(NioServerSocketChannel.class)
-                .childHandler(new MqttTransportServerInitializer(processor, deviceService, authService, relationService, adaptor, sslHandlerProvider));
+                .childHandler(new MqttTransportServerInitializer(processor, deviceService, authService, relationService,
+                        adaptor, sslHandlerProvider, quotaService, maxPayloadSize));
 
         serverChannel = b.bind(host, port).sync().channel();
         log.info("Mqtt transport started!");
@@ -111,8 +119,8 @@ public class MqttTransportService {
         try {
             serverChannel.close().sync();
         } finally {
-            bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();
+            bossGroup.shutdownGracefully();
         }
         log.info("MQTT transport stopped!");
     }

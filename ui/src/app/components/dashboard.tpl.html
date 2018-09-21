@@ -1,6 +1,6 @@
 <!--
 
-    Copyright © 2016-2017 The Thingsboard Authors
+    Copyright © 2016-2018 The Thingsboard Authors
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -55,7 +55,7 @@
 											   ng-show="!vm.isEdit"
 											   ng-click="action.onAction($event)"
 											   class="md-icon-button">
-										<md-tooltip md-direction="top">
+										<md-tooltip md-direction="{{vm.isWidgetExpanded ? 'bottom' : 'top'}}">
 											{{action.displayName}}
 										</md-tooltip>
 										<ng-md-icon size="20" icon="{{action.icon}}"></ng-md-icon>
@@ -65,7 +65,7 @@
 											   ng-show="!vm.isEdit && action.show"
 											   ng-click="action.onAction($event)"
 											   class="md-icon-button">
-											   <md-tooltip md-direction="top">
+											   <md-tooltip md-direction="{{vm.isWidgetExpanded ? 'bottom' : 'top'}}">
 												   {{ action.name | translate }}
 											   </md-tooltip>
 											   <ng-md-icon size="20" icon="{{action.icon}}"></ng-md-icon>
@@ -114,16 +114,17 @@
 										 isEdit: vm.isEdit,
 										 isMobile: vm.isMobileSize,
 										 dashboardTimewindow: vm.dashboardTimewindow,
-										 dashboardTimewindowApi: vm.dashboardTimewindowApi }">
+										 dashboardTimewindowApi: vm.dashboardTimewindowApi,
+										 dashboard: vm }">
 									</div>
 								</div>
 							</div>
 							<md-menu-content id="menu" width="4" ng-mouseleave="$mdCloseMousepointMenu()">
 								<md-menu-item ng-repeat ="item in vm.widgetContextMenuItems">
 									<md-button ng-disabled="!item.enabled" ng-click="item.action(vm.widgetContextMenuEvent, widget)">
+										<span ng-if="item.shortcut" class="tb-alt-text"> {{ item.shortcut | keyboardShortcut }}</span>
 										<md-icon ng-if="item.icon" md-menu-align-target aria-label="{{ item.value | translate }}" class="material-icons">{{item.icon}}</md-icon>
 										<span translate>{{item.value}}</span>
-										<span ng-if="item.shortcut" class="tb-alt-text"> {{ item.shortcut | keyboardShortcut }}</span>
 									</md-button>
 								</md-menu-item>
 							</md-menu-content>
@@ -136,9 +137,9 @@
 	<md-menu-content id="menu" width="4" ng-mouseleave="$mdCloseMousepointMenu()">
 		<md-menu-item ng-repeat ="item in vm.contextMenuItems">
 			<md-button ng-disabled="!item.enabled" ng-click="item.action(vm.contextMenuEvent)">
+				<span ng-if="item.shortcut" class="tb-alt-text"> {{ item.shortcut | keyboardShortcut }}</span>
 				<md-icon ng-if="item.icon" md-menu-align-target aria-label="{{ item.value | translate }}" class="material-icons">{{item.icon}}</md-icon>
 				<span translate>{{item.value}}</span>
-				<span ng-if="item.shortcut" class="tb-alt-text"> {{ item.shortcut | keyboardShortcut }}</span>
 			</md-button>
 		</md-menu-item>
 	</md-menu-content>

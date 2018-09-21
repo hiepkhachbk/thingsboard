@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 import thingsboardTypes from '../../common/types.constant';
 import thingsboardUtils from '../../common/utils.service';
 import thingsboardEntityAliasSelect from '../entity-alias-select.directive';
@@ -23,6 +22,8 @@ import thingsboardLegendConfig from '../legend-config.directive';
 import thingsboardJsonForm from '../json-form.directive';
 import thingsboardManageWidgetActions from './action/manage-widget-actions.directive';
 import 'angular-ui-ace';
+
+import fixAceEditor from './../ace-editor-fix';
 
 import './widget-config.scss';
 
@@ -73,6 +74,9 @@ function WidgetConfig($compile, $templateCache, $rootScope, $translate, $timeout
                 enableSnippets: true,
                 enableBasicAutocompletion: true,
                 enableLiveAutocompletion: true
+            },
+            onLoad: function (_ace) {
+                fixAceEditor(_ace);
             }
         };
 

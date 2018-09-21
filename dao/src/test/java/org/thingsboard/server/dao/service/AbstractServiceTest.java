@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,9 @@ package org.thingsboard.server.dao.service;
 import com.datastax.driver.core.utils.UUIDs;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.TextNode;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.test.annotation.DirtiesContext;
@@ -29,6 +28,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.context.support.AnnotationConfigContextLoader;
 import org.thingsboard.server.common.data.BaseData;
+import org.thingsboard.server.common.data.EntityType;
 import org.thingsboard.server.common.data.Event;
 import org.thingsboard.server.common.data.id.EntityId;
 import org.thingsboard.server.common.data.id.TenantId;
@@ -36,19 +36,18 @@ import org.thingsboard.server.common.data.id.UUIDBased;
 import org.thingsboard.server.common.data.plugin.ComponentDescriptor;
 import org.thingsboard.server.common.data.plugin.ComponentScope;
 import org.thingsboard.server.common.data.plugin.ComponentType;
-import org.thingsboard.server.common.data.plugin.PluginMetaData;
-import org.thingsboard.server.common.data.rule.RuleMetaData;
 import org.thingsboard.server.dao.alarm.AlarmService;
 import org.thingsboard.server.dao.asset.AssetService;
+import org.thingsboard.server.dao.audit.AuditLogLevelFilter;
+import org.thingsboard.server.dao.audit.AuditLogLevelMask;
 import org.thingsboard.server.dao.component.ComponentDescriptorService;
 import org.thingsboard.server.dao.customer.CustomerService;
 import org.thingsboard.server.dao.dashboard.DashboardService;
 import org.thingsboard.server.dao.device.DeviceCredentialsService;
 import org.thingsboard.server.dao.device.DeviceService;
 import org.thingsboard.server.dao.event.EventService;
-import org.thingsboard.server.dao.plugin.PluginService;
 import org.thingsboard.server.dao.relation.RelationService;
-import org.thingsboard.server.dao.rule.RuleService;
+import org.thingsboard.server.dao.rule.RuleChainService;
 import org.thingsboard.server.dao.settings.AdminSettingsService;
 import org.thingsboard.server.dao.tenant.TenantService;
 import org.thingsboard.server.dao.timeseries.TimeseriesService;
@@ -58,8 +57,8 @@ import org.thingsboard.server.dao.widget.WidgetsBundleService;
 
 import java.io.IOException;
 import java.util.Comparator;
-import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.HashMap;
+import java.util.Map;
 
 
 @RunWith(SpringRunner.class)
@@ -105,12 +104,6 @@ public abstract class AbstractServiceTest {
     protected TimeseriesService tsService;
 
     @Autowired
-    protected PluginService pluginService;
-
-    @Autowired
-    protected RuleService ruleService;
-
-    @Autowired
     protected EventService eventService;
 
     @Autowired
@@ -118,6 +111,9 @@ public abstract class AbstractServiceTest {
 
     @Autowired
     protected AlarmService alarmService;
+
+    @Autowired
+    protected RuleChainService ruleChainService;
 
     @Autowired
     private ComponentDescriptorService componentDescriptorService;
@@ -143,32 +139,6 @@ public abstract class AbstractServiceTest {
         return event;
     }
 
-    protected PluginMetaData generatePlugin(TenantId tenantId, String token) throws IOException {
-        return generatePlugin(tenantId, token, "org.thingsboard.component.PluginTest", "org.thingsboard.component.ActionTest", "TestJsonDescriptor.json", "TestJsonData.json");
-    }
-
-    protected PluginMetaData generatePlugin(TenantId tenantId, String token, String clazz, String actions, String configurationDescriptorResource, String dataResource) throws IOException {
-        if (tenantId == null) {
-            tenantId = new TenantId(UUIDs.timeBased());
-        }
-        if (token == null) {
-            token = UUID.randomUUID().toString();
-        }
-        getOrCreateDescriptor(ComponentScope.TENANT, ComponentType.PLUGIN, clazz, configurationDescriptorResource, actions);
-        PluginMetaData pluginMetaData = new PluginMetaData();
-        pluginMetaData.setName("Testing");
-        pluginMetaData.setClazz(clazz);
-        pluginMetaData.setTenantId(tenantId);
-        pluginMetaData.setApiToken(token);
-        pluginMetaData.setAdditionalInfo(mapper.readTree("{\"test\":\"test\"}"));
-        try {
-            pluginMetaData.setConfiguration(readFromResource(dataResource));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        return pluginMetaData;
-    }
-
     private ComponentDescriptor getOrCreateDescriptor(ComponentScope scope, ComponentType type, String clazz, String configurationDescriptorResource) throws IOException {
         return getOrCreateDescriptor(scope, type, clazz, configurationDescriptorResource, null);
     }
@@ -192,39 +162,13 @@ public abstract class AbstractServiceTest {
         return mapper.readTree(this.getClass().getClassLoader().getResourceAsStream(resourceName));
     }
 
-    protected RuleMetaData generateRule(TenantId tenantId, Integer weight, String pluginToken) throws IOException {
-        if (tenantId == null) {
-            tenantId = new TenantId(UUIDs.timeBased());
+    @Bean
+    public AuditLogLevelFilter auditLogLevelFilter() {
+        Map<String,String> mask = new HashMap<>();
+        for (EntityType entityType : EntityType.values()) {
+            mask.put(entityType.name().toLowerCase(), AuditLogLevelMask.RW.name());
         }
-        if (weight == null) {
-            weight = ThreadLocalRandom.current().nextInt();
-        }
-
-        RuleMetaData ruleMetaData = new RuleMetaData();
-        ruleMetaData.setName("Testing");
-        ruleMetaData.setTenantId(tenantId);
-        ruleMetaData.setWeight(weight);
-        ruleMetaData.setPluginToken(pluginToken);
-
-        ruleMetaData.setAction(createNode(ComponentScope.TENANT, ComponentType.ACTION,
-                "org.thingsboard.component.ActionTest", "TestJsonDescriptor.json", "TestJsonData.json"));
-        ruleMetaData.setProcessor(createNode(ComponentScope.TENANT, ComponentType.PROCESSOR,
-                "org.thingsboard.component.ProcessorTest", "TestJsonDescriptor.json", "TestJsonData.json"));
-        ruleMetaData.setFilters(mapper.createArrayNode().add(
-                createNode(ComponentScope.TENANT, ComponentType.FILTER,
-                        "org.thingsboard.component.FilterTest", "TestJsonDescriptor.json", "TestJsonData.json")
-        ));
-
-        ruleMetaData.setAdditionalInfo(mapper.readTree("{}"));
-        return ruleMetaData;
+        return new AuditLogLevelFilter(mask);
     }
 
-    protected JsonNode createNode(ComponentScope scope, ComponentType type, String clazz, String configurationDescriptor, String configuration) throws IOException {
-        getOrCreateDescriptor(scope, type, clazz, configurationDescriptor);
-        ObjectNode oNode = mapper.createObjectNode();
-        oNode.set("name", new TextNode("test action"));
-        oNode.set("clazz", new TextNode(clazz));
-        oNode.set("configuration", readFromResource(configuration));
-        return oNode;
-    }
 }

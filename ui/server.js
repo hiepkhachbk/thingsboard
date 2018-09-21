@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,9 @@ const httpProxy = require('http-proxy');
 const forwardHost = 'localhost';
 const forwardPort = 8080;
 
+const ruleNodeUiforwardHost = 'localhost';
+const ruleNodeUiforwardPort = 8080;
+
 const app = express();
 const server = http.createServer(app);
 
@@ -52,15 +55,32 @@ const apiProxy = httpProxy.createProxyServer({
     }
 });
 
+const ruleNodeUiApiProxy = httpProxy.createProxyServer({
+    target: {
+        host: ruleNodeUiforwardHost,
+        port: ruleNodeUiforwardPort
+    }
+});
+
 apiProxy.on('error', function (err, req, res) {
     console.warn('API proxy error: ' + err);
     res.end('Error.');
 });
 
+ruleNodeUiApiProxy.on('error', function (err, req, res) {
+    console.warn('RuleNode UI API proxy error: ' + err);
+    res.end('Error.');
+});
+
 console.info(`Forwarding API requests to http://${forwardHost}:${forwardPort}`);
+console.info(`Forwarding Rule Node UI requests to http://${ruleNodeUiforwardHost}:${ruleNodeUiforwardPort}`);
 
 app.all('/api/*', (req, res) => {
     apiProxy.web(req, res);
+});
+
+app.all('/static/rulenode/*', (req, res) => {
+    ruleNodeUiApiProxy.web(req, res);
 });
 
 app.get('*', function(req, res) {

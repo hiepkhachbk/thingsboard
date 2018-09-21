@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,8 @@
 package org.thingsboard.server.common.msg.core;
 
 import lombok.Data;
-import org.thingsboard.server.common.msg.session.MsgType;
+import org.thingsboard.server.common.msg.session.SessionMsgType;
+import org.thingsboard.server.common.msg.session.SessionMsgType;
 import org.thingsboard.server.common.msg.session.ToDeviceMsg;
 
 /**
@@ -29,9 +30,8 @@ public class ToDeviceRpcRequestMsg implements ToDeviceMsg {
     private final String method;
     private final String params;
 
-    @Override
-    public MsgType getMsgType() {
-        return MsgType.TO_DEVICE_RPC_REQUEST;
+    public SessionMsgType getSessionMsgType() {
+        return SessionMsgType.TO_DEVICE_RPC_REQUEST;
     }
 
     @Override

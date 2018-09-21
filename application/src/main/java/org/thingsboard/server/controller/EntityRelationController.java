@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2017 The Thingsboard Authors
+ * Copyright © 2016-2018 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,24 @@ package org.thingsboard.server.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+import org.thingsboard.server.common.data.alarm.Alarm;
+import org.thingsboard.server.common.data.audit.ActionType;
+import org.thingsboard.server.common.data.exception.ThingsboardErrorCode;
+import org.thingsboard.server.common.data.exception.ThingsboardException;
 import org.thingsboard.server.common.data.id.EntityId;
 import org.thingsboard.server.common.data.id.EntityIdFactory;
+import org.thingsboard.server.common.data.id.UUIDBased;
 import org.thingsboard.server.common.data.relation.EntityRelation;
 import org.thingsboard.server.common.data.relation.EntityRelationInfo;
-import org.thingsboard.server.common.data.relation.RelationTypeGroup;
 import org.thingsboard.server.common.data.relation.EntityRelationsQuery;
-import org.thingsboard.server.exception.ThingsboardErrorCode;
-import org.thingsboard.server.exception.ThingsboardException;
+import org.thingsboard.server.common.data.relation.RelationTypeGroup;
 
 import java.util.List;
 
@@ -52,7 +61,15 @@ public class EntityRelationController extends BaseController {
                 relation.setTypeGroup(RelationTypeGroup.COMMON);
             }
             relationService.saveRelation(relation);
+            logEntityAction(relation.getFrom(), null, getCurrentUser().getCustomerId(),
+                    ActionType.RELATION_ADD_OR_UPDATE, null, relation);
+            logEntityAction(relation.getTo(), null, getCurrentUser().getCustomerId(),
+                    ActionType.RELATION_ADD_OR_UPDATE, null, relation);
         } catch (Exception e) {
+            logEntityAction(relation.getFrom(), null, getCurrentUser().getCustomerId(),
+                    ActionType.RELATION_ADD_OR_UPDATE, e, relation);
+            logEntityAction(relation.getTo(), null, getCurrentUser().getCustomerId(),
+                    ActionType.RELATION_ADD_OR_UPDATE, e, relation);
             throw handleException(e);
         }
     }
@@ -75,12 +92,21 @@ public class EntityRelationController extends BaseController {
         checkEntityId(fromId);
         checkEntityId(toId);
         RelationTypeGroup relationTypeGroup = parseRelationTypeGroup(strRelationTypeGroup, RelationTypeGroup.COMMON);
+        EntityRelation relation = new EntityRelation(fromId, toId, strRelationType, relationTypeGroup);
         try {
             Boolean found = relationService.deleteRelation(fromId, toId, strRelationType, relationTypeGroup);
             if (!found) {
                 throw new ThingsboardException("Requested item wasn't found!", ThingsboardErrorCode.ITEM_NOT_FOUND);
             }
+            logEntityAction(relation.getFrom(), null, getCurrentUser().getCustomerId(),
+                    ActionType.RELATION_DELETED, null, relation);
+            logEntityAction(relation.getTo(), null, getCurrentUser().getCustomerId(),
+                    ActionType.RELATION_DELETED, null, relation);
         } catch (Exception e) {
+            logEntityAction(relation.getFrom(), null, getCurrentUser().getCustomerId(),
+                    ActionType.RELATION_DELETED, e, relation);
+            logEntityAction(relation.getTo(), null, getCurrentUser().getCustomerId(),
+                    ActionType.RELATION_DELETED, e, relation);
             throw handleException(e);
         }
     }
@@ -96,7 +122,9 @@ public class EntityRelationController extends BaseController {
         checkEntityId(entityId);
         try {
             relationService.deleteEntityRelations(entityId);
+            logEntityAction(entityId, null, getCurrentUser().getCustomerId(), ActionType.RELATIONS_DELETED, null);
         } catch (Exception e) {
+            logEntityAction(entityId, null, getCurrentUser().getCustomerId(), ActionType.RELATIONS_DELETED, e);
             throw handleException(e);
         }
     }
@@ -120,7 +148,7 @@ public class EntityRelationController extends BaseController {
             checkEntityId(fromId);
             checkEntityId(toId);
             RelationTypeGroup typeGroup = parseRelationTypeGroup(strRelationTypeGroup, RelationTypeGroup.COMMON);
-            return checkNotNull(relationService.getRelation(fromId, toId, strRelationType, typeGroup).get());
+            return checkNotNull(relationService.getRelation(fromId, toId, strRelationType, typeGroup));
         } catch (Exception e) {
             throw handleException(e);
         }
@@ -138,7 +166,7 @@ public class EntityRelationController extends BaseController {
         checkEntityId(entityId);
         RelationTypeGroup typeGroup = parseRelationTypeGroup(strRelationTypeGroup, RelationTypeGroup.COMMON);
         try {
-            return checkNotNull(relationService.findByFrom(entityId, typeGroup).get());
+            return checkNotNull(relationService.findByFrom(entityId, typeGroup));
         } catch (Exception e) {
             throw handleException(e);
         }
@@ -176,7 +204,7 @@ public class EntityRelationController extends BaseController {
         checkEntityId(entityId);
         RelationTypeGroup typeGroup = parseRelationTypeGroup(strRelationTypeGroup, RelationTypeGroup.COMMON);
         try {
-            return checkNotNull(relationService.findByFromAndType(entityId, strRelationType, typeGroup).get());
+            return checkNotNull(relationService.findByFromAndType(entityId, strRelationType, typeGroup));
         } catch (Exception e) {
             throw handleException(e);
         }
@@ -194,7 +222,7 @@ public class EntityRelationController extends BaseController {
         checkEntityId(entityId);
         RelationTypeGroup typeGroup = parseRelationTypeGroup(strRelationTypeGroup, RelationTypeGroup.COMMON);
         try {
-            return checkNotNull(relationService.findByTo(entityId, typeGroup).get());
+            return checkNotNull(relationService.findByTo(entityId, typeGroup));
         } catch (Exception e) {
             throw handleException(e);
         }
@@ -204,8 +232,8 @@ public class EntityRelationController extends BaseController {
     @RequestMapping(value = "/relations/info", method = RequestMethod.GET, params = {TO_ID, TO_TYPE})
     @ResponseBody
     public List<EntityRelationInfo> findInfoByTo(@RequestParam(TO_ID) String strToId,
-                                                   @RequestParam(TO_TYPE) String strToType,
-                                                   @RequestParam(value = "relationTypeGroup", required = false) String strRelationTypeGroup) throws ThingsboardException {
+                                                 @RequestParam(TO_TYPE) String strToType,
+                                                 @RequestParam(value = "relationTypeGroup", required = false) String strRelationTypeGroup) throws ThingsboardException {
         checkParameter(TO_ID, strToId);
         checkParameter(TO_TYPE, strToType);
         EntityId entityId = EntityIdFactory.getByTypeAndId(strToType, strToId);
@@ -232,7 +260,7 @@ public class EntityRelationController extends BaseController {
         checkEntityId(entityId);
         RelationTypeGroup typeGroup = parseRelationTypeGroup(strRelationTypeGroup, RelationTypeGroup.COMMON);
         try {
-            return checkNotNull(relationService.findByToAndType(entityId, strRelationType, typeGroup).get());
+            return checkNotNull(relationService.findByToAndType(entityId, strRelationType, typeGroup));
         } catch (Exception e) {
             throw handleException(e);
         }
@@ -270,10 +298,11 @@ public class EntityRelationController extends BaseController {
 
     private RelationTypeGroup parseRelationTypeGroup(String strRelationTypeGroup, RelationTypeGroup defaultValue) {
         RelationTypeGroup result = defaultValue;
-        if (strRelationTypeGroup != null && strRelationTypeGroup.trim().length()>0) {
+        if (strRelationTypeGroup != null && strRelationTypeGroup.trim().length() > 0) {
             try {
                 result = RelationTypeGroup.valueOf(strRelationTypeGroup);
-            } catch (IllegalArgumentException e) { }
+            } catch (IllegalArgumentException e) {
+            }
         }
         return result;
     }
